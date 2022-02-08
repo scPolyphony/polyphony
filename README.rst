@@ -22,6 +22,22 @@ TODO: add a project description
 * Free software: MIT license
 * Documentation: https://polyphony.readthedocs.io.
 
+Install
+--------
+
+
+Install from source
+~~~~
+.. code-block::
+
+    git clone https://github.com/ChengFR/polyphony.git
+    make install
+
+If you want to install the package for development. Please run:
+
+.. code-block::
+
+    make install-develop
 
 Features
 --------
