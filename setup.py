@@ -15,6 +15,7 @@ install_requires = [
     'scikit-learn>=1.0.2,<1.1',
     'scanpy>=1.8.2,<1.9',
     'scipy>=1.7.3,<1.8',
+    'scarches>=0.4.0,<0.4.1',
 
     # Flask
     'flask>=1.1.0,<1.2',
@@ -24,9 +25,8 @@ install_requires = [
 ]
 
 tests_requires = [
-    'pytest==6.2.4',
+    'pytest==6.2.5',
     'pytest-cov>=2.6.0',
-    'coverage==4.5.4',
 ]
 
 dev_requires = [
