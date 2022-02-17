@@ -16,6 +16,8 @@ install_requires = [
     'scanpy>=1.8.2,<1.9',
     'scipy>=1.7.3,<1.8',
     'scarches>=0.4.0,<0.4.1',
+    'tensorflow>=2.0, <=2.5',
+    'umap-learn<=0.5.2',
 
     # Flask
     'flask>=1.1.0,<1.2',
@@ -38,7 +40,6 @@ dev_requires = [
     'jupyter>=1.0.0',
 
     # style check
-    'flake8>=3.7.8',
     'tox>=3.14.0',
 
     # docs
