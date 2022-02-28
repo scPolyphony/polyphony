@@ -12,6 +12,7 @@ class Polyphony:
         self,
         ref_dataset,
         query_dataset,
+        problem_id='example',
 
         batch_key='batch',
         latent_key='latent',
@@ -20,7 +21,7 @@ class Polyphony:
         recommender_cls=HarmonyAnchorRecommender,
         protocol_cls=TopSelectorProtocol,
 
-        working_dir=DATA_DIR
+        working_dir=None
     ):
 
         self._ref_dataset = ref_dataset
@@ -37,16 +38,16 @@ class Polyphony:
         self._anchor_recommender = recommender_cls()
         self._protocol = protocol_cls(self._anchor_recommender, self._anchoring_step)
 
-        self._working_dir = working_dir
-        self._ref_model_path = os.path.join(working_dir, 'model', 'ref_model')
-        self._query_model_path = os.path.join(working_dir, 'model', 'surgery_model')
+        self._working_dir = working_dir if working_dir else os.path.join(DATA_DIR, problem_id)
+        self._ref_model_path = os.path.join(self._working_dir, 'model', 'ref_model')
+        self._query_model_path = os.path.join(self._working_dir, 'model', 'surgery_model')
 
-        self._ref_dataset.working_dir = os.path.join(working_dir, 'data')
-        self._query_dataset.working_dir = os.path.join(working_dir, 'data')
+        self._ref_dataset.working_dir = os.path.join(self._working_dir, 'data')
+        self._query_dataset.working_dir = os.path.join(self._working_dir, 'data')
 
-        os.makedirs(working_dir, exist_ok=True)
-        os.makedirs(os.path.join(working_dir, 'model'), exist_ok=True)
-        os.makedirs(os.path.join(working_dir, 'data'), exist_ok=True)
+        os.makedirs(self._working_dir, exist_ok=True)
+        os.makedirs(os.path.join(self._working_dir, 'model'), exist_ok=True)
+        os.makedirs(os.path.join(self._working_dir, 'data'), exist_ok=True)
 
     @property
     def ref_dataset(self):
