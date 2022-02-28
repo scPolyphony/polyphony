@@ -39,6 +39,14 @@ If you want to install the package for development. Please run:
 
     make install-develop
 
+How to use
+--------
+Start the server by
+
+.. code-block::
+
+    polyphony
+
 Features
 --------
 
