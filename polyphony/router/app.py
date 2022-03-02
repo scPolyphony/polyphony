@@ -1,33 +1,14 @@
-import os
-
-from flask import Flask, send_from_directory
+from flask import Flask
 from flask_cors import CORS
 
-from polyphony import Polyphony
-from polyphony.dataset import load_pancreas
 from polyphony.router.routes import add_routes
+from polyphony.router.polyphony_manager import PolyphonyManager
+from polyphony.router.utils import SERVER_STATIC_DIR
 
 
-SERVER_STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
-
-
-def create_app():
-    problem_id = 'pancreas'
-
-    if problem_id == 'pancreas':
-        ref_dataset, query_dataset = load_pancreas()
-    else:
-        raise NotImplemented
-
-    pp = Polyphony(ref_dataset, query_dataset)
-    pp.setup_data()
-    pp.init_reference_step()
-    pp.umap_transform()
-
-    pp.ref_dataset.save_adata(os.path.join(SERVER_STATIC_DIR, 'zarr',
-                                           problem_id + 'reference.zarr'))
-    pp.query_dataset.save_adata(os.path.join(SERVER_STATIC_DIR, 'zarr',
-                                             problem_id + 'query.zarr'))
+def create_app(problem_id):
+    pm = PolyphonyManager(problem_id, SERVER_STATIC_DIR)
+    pm.init_round()
 
     app = Flask(
         __name__,
@@ -36,18 +17,9 @@ def create_app():
         template_folder='../../apidocs'
     )
 
-    @app.route('/files/<path:path>')
-    def get_file(path):
-        return send_from_directory(SERVER_STATIC_DIR, filename=path, as_attachment=True)
-
-    app.pp = pp
+    app.pm = pm
 
     CORS(app, resources={r"/api/*": {"origins": "*"}, r"/files/*": {"origins": "*"}})
-    add_routes(app)
+    add_routes(app, SERVER_STATIC_DIR)
 
     return app
-
-
-def init_pp():
-    pass
-
