@@ -18,12 +18,16 @@ class Dataset:
         dataset_id='dataset',
         batch_key='batch',
         latent_key='latent',
+        anchor_key='anchor_cluster',
         working_dir=DATA_DIR
     ):
         self._adata = adata
         self._dataset_id = dataset_id
+
         self._batch_key = batch_key
         self._latent_key = latent_key
+        self._anchor_key = anchor_key
+
         self._working_dir = working_dir
 
         self._embedder = None
@@ -37,12 +41,40 @@ class Dataset:
         self._adata = adata
 
     @property
-    def working_dir(self):
-        return self._working_dir
+    def obs(self):
+        return self._adata.obs
 
-    @working_dir.setter
-    def working_dir(self, working_dir):
-        self._working_dir = working_dir
+    @property
+    def obsm(self):
+        return self._adata.obsm
+
+    @property
+    def X(self):
+        return self._adata.X
+
+    @property
+    def latent(self):
+        return self._adata.obsm[self._latent_key]
+
+    @latent.setter
+    def latent(self, latent):
+        self._adata.obsm[self._latent_key] = latent
+
+    @property
+    def batch(self):
+        return self._adata.obs[self._batch_key]
+
+    @property
+    def anchor_mat(self):
+        return self._adata.obsm[self._anchor_key]
+
+    @anchor_mat.setter
+    def anchor_mat(self, anchor_mat):
+        self._adata.obsm[self._anchor_key] = anchor_mat
+
+    @property
+    def umap(self):
+        return self._adata.obsm['umap']
 
     @property
     def embedder(self):
@@ -90,11 +122,8 @@ class Dataset:
             self.build_umap_model(dataset.adata, source=source)
         model = self.embedder if model is None else model
 
-        adata = dataset.adata
-        umap_input = self._get_umap_input(adata, source)
-        adata.obsm['X_umap'] = model.transform(umap_input)
-        dataset.adata = adata
-        return dataset
+        umap_input = self._get_umap_input(dataset.adata, source)
+        dataset.adata.obsm['X_umap'] = model.transform(umap_input)
 
     def save_adata(self, path):
         _, file_extension = os.path.splitext(path)
