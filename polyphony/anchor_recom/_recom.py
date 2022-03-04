@@ -3,31 +3,27 @@ from abc import ABC, abstractmethod
 
 class AnchorRecommender(ABC):
 
-    def __init__(self, adata_full=None, source_key='source', latent_key='latent'):
-        self._adata_full = adata_full
+    def __init__(self, query_dataset=None, ref_dataset=None, source_key='source'):
+        self._query_dataset = query_dataset
+        self._ref_dataset = ref_dataset
         self._source_key = source_key
-        self._latent_key = latent_key
 
     @property
-    def adata_full(self):
-        return self._adata_full
-
-    @adata_full.setter
-    def adata_full(self, adata_full):
-        self._adata_full = adata_full
+    def query_latent(self):
+        return self._query_dataset.latent
 
     @property
-    def source_key(self):
-        return self._source_key
+    def ref_latent(self):
+        return self._ref_dataset.latent
 
     @property
-    def latent_key(self):
-        return self._latent_key
+    def query_obs(self):
+        return self._query_dataset.obs
+
+    @property
+    def ref_obs(self):
+        return self._ref_dataset.obs
 
     @abstractmethod
     def recommend_anchors(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
-    def get_anchor_latent(self, *args, **kwargs):
         pass
