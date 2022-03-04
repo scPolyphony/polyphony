@@ -19,7 +19,7 @@ class Polyphony:
 
         model_cls=ActiveSCVI,
         recommender_cls=HarmonyAnchorRecommender,
-        protocol_cls=TopSelectorProtocol,
+        # protocol_cls=TopSelectorProtocol,
 
         working_dir=None
     ):
@@ -35,8 +35,8 @@ class Polyphony:
         self._query_model = None
         self._update_query_models = dict()
 
-        self._anchor_recommender = recommender_cls()
-        self._protocol = protocol_cls(self._anchor_recommender, self._anchoring_step)
+        self._anchor_recom = recommender_cls(self._ref_dataset, self._query_dataset)
+        # self._protocol = protocol_cls(self._anchor_recommender, self._anchoring_step)
 
         self._working_dir = working_dir if working_dir else os.path.join(DATA_DIR, problem_id)
         self._ref_model_path = os.path.join(self._working_dir, 'model', 'ref_model')
@@ -72,22 +72,17 @@ class Polyphony:
     def setup_data(self):
         self._model_cls.setup_anndata(self.reference_adata, batch_key=self._batch_key)
         self._model_cls.setup_anndata(self.query_adata, batch_key=self._batch_key)
-        self._update_data()
 
     def init_reference_step(self, **kwargs):
         self._build_reference_latent(**kwargs)
         self._build_query_latent(**kwargs)
-        self._update_data()
 
     def anchor_update_step(self):
-        self._protocol.run_step()
+        self._anchor_recom.recommend_anchors()
 
     def umap_transform(self, udpate_reference=True, update_query=True):
         udpate_reference and self.ref_dataset.umap_transform()
         update_query and self.query_dataset.umap_transform(model=self.ref_dataset.embedder)
-
-    def _update_data(self):
-        self._anchor_recommender.adata_full = self.full_adata
 
     def _save_model(self, model_token):
         if model_token == 'ref':
@@ -161,19 +156,19 @@ class Polyphony:
 
     def _build_reference_latent(self, **kwargs):
         self._build_ref_model(**kwargs)
-        self.reference_adata.obsm[self._latent_key] = self._ref_model.get_latent_representation()
+        self._ref_dataset.latent = self._ref_model.get_latent_representation()
 
     def _build_query_latent(self, **kwargs):
         self._build_query_model(**kwargs)
-        self.query_adata.obsm[self._latent_key] = self._query_model.get_latent_representation()
+        self._query_dataset.latent = self._query_model.get_latent_representation()
 
     def _build_anchored_latent(self, update_id='query_update', load_exist=False, **kwargs):
         self._build_anchored_model(update_id=update_id, load_exist=load_exist, **kwargs)
-        self.query_adata.obsm[self._latent_key] = self._update_query_models[update_id] \
+        self._query_dataset.latent = self._update_query_models[update_id] \
             .get_latent_representation()
 
-    def _anchoring_step(self, cell_update, query_anchor_latent, update_id):
-        self.query_adata.obs['cell_update'] = cell_update
-        self.query_adata.obsm['desired_rep'] = query_anchor_latent
-        self._build_anchored_latent(update_id)
-        self._update_data()
+    # def _anchoring_step(self, cell_update, query_anchor_latent, update_id):
+    #     self.query_adata.obs['cell_update'] = cell_update
+    #     self.query_adata.obsm['desired_rep'] = query_anchor_latent
+    #     self._build_anchored_latent(update_id)
+    #     self._update_data()

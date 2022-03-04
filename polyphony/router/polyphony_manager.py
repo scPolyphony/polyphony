@@ -26,6 +26,7 @@ class PolyphonyManager:
     def init_round(self, save=True):
         self._pp.setup_data()
         self._pp.init_reference_step()
+        self._pp.anchor_update_step()
         self._pp.umap_transform()
         save and self.save_ann()
 
