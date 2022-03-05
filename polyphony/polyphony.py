@@ -37,6 +37,7 @@ class Polyphony:
 
         self._anchor_recom = recommender_cls(self._ref_dataset, self._query_dataset)
         # self._protocol = protocol_cls(self._anchor_recommender, self._anchoring_step)
+        self._update_id = 0
 
         self._working_dir = working_dir if working_dir else os.path.join(DATA_DIR, problem_id)
         self._ref_model_path = os.path.join(self._working_dir, 'model', 'ref_model')
@@ -77,8 +78,14 @@ class Polyphony:
         self._build_reference_latent(**kwargs)
         self._build_query_latent(**kwargs)
 
-    def anchor_update_step(self):
+    def anchor_recom_step(self):
         self._anchor_recom.recommend_anchors()
+
+    def anchor_update_step(self, query_anchor_mat, **kwargs):
+        self._query_dataset.anchor_mat = query_anchor_mat
+        self._model_cls.setup_anchor_rep(self.ref_dataset, self.query_dataset)
+        self._update_id += 1
+        self._build_anchored_latent(**kwargs)
 
     def umap_transform(self, udpate_reference=True, update_query=True):
         udpate_reference and self.ref_dataset.umap_transform()
@@ -162,13 +169,8 @@ class Polyphony:
         self._build_query_model(**kwargs)
         self._query_dataset.latent = self._query_model.get_latent_representation()
 
-    def _build_anchored_latent(self, update_id='query_update', load_exist=False, **kwargs):
+    def _build_anchored_latent(self, load_exist=False, **kwargs):
+        update_id = str(self._update_id)
         self._build_anchored_model(update_id=update_id, load_exist=load_exist, **kwargs)
         self._query_dataset.latent = self._update_query_models[update_id] \
             .get_latent_representation()
-
-    # def _anchoring_step(self, cell_update, query_anchor_latent, update_id):
-    #     self.query_adata.obs['cell_update'] = cell_update
-    #     self.query_adata.obsm['desired_rep'] = query_anchor_latent
-    #     self._build_anchored_latent(update_id)
-    #     self._update_data()
