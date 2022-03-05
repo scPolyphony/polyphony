@@ -1,13 +1,13 @@
 import numpy as np
 
-from typing import Optional
-
 from anndata import AnnData
 from scarches.models import SCVI
 from scvi.model._utils import _init_library_size
 from scvi._compat import Literal
 
+from polyphony.dataset import Dataset
 from polyphony.models import ActiveVAE
+from polyphony.utils.math import cluster_agg
 
 
 class ActiveSCVI(SCVI):
@@ -64,8 +64,6 @@ class ActiveSCVI(SCVI):
     @staticmethod
     def setup_anndata(
         adata: AnnData,
-        update_key: Optional[str] = None,
-        update_latent_key: Optional[str] = None,
         n_latent: int = 10,
         **kwargs
     ):
@@ -76,20 +74,40 @@ class ActiveSCVI(SCVI):
 
         # Register `update_key`, which indicates whether the cell's latent vector has
         # already be given
-        update_key = 'cell_update' if update_key is None else update_key
+        update_key = 'cell_update'
+        rep_key = 'desired_rep'
+        data_registry = adata.uns['_scvi']['data_registry']
 
         # Fill the (whether to) update field with False
         if update_key not in adata.obs.keys():
             adata.obs[update_key] = False
-        adata.uns['_scvi']['data_registry']['cell_update'] = {'attr_name': 'obs',
-                                                              'attr_key': update_key}
+        data_registry['cell_update'] = {'attr_name': 'obs', 'attr_key': update_key}
 
         # Register `update_rep_key` in `adata.obsm`, which includes cells' (desired) latent vectors
-        update_rep_key = 'desired_rep' if update_latent_key is None else update_latent_key
-        if update_rep_key not in adata.obsm.keys():
-            adata.obsm[update_rep_key] = np.zeros([len(adata), n_latent])
+        if rep_key not in adata.obsm.keys():
+            adata.obsm[rep_key] = np.zeros([len(adata), n_latent])
 
         # TODO: registering obsm keys is not supported by the `_setup_anndata` function in
         #  scvi-tool == 14.6. So it is manually done.
-        adata.uns['_scvi']['data_registry']['desired_rep'] = {'attr_name': 'obsm',
-                                                              'attr_key': update_rep_key}
+        data_registry['desired_rep'] = {'attr_name': 'obsm', 'attr_key': rep_key}
+
+    @staticmethod
+    def setup_anchor_rep(
+        ref_dataset: Dataset,
+        query_dataset: Dataset,
+    ):
+        update_key = 'cell_update'
+        rep_key = 'desired_rep'
+        query_dataset.obs[update_key] = (query_dataset.anchor_mat > (1 - 10 ** -3)).sum(axis=1)
+
+        ref_stat = cluster_agg(ref_dataset.latent, ref_dataset.anchor_mat.T)
+        query_stat = cluster_agg(query_dataset.latent, query_dataset.anchor_mat.T)
+
+        ref_mean = ref_stat[ref_stat.columns[::2]].fillna(0)
+        query_mean = query_stat[query_stat.columns[::2]].fillna(0)
+        diff_mean = (ref_mean - query_mean).fillna(0)
+
+        cluster_index = diff_mean.index
+
+        query_dataset.obsm[rep_key] = query_dataset.latent + np.dot(
+            query_dataset.anchor_mat[:, cluster_index], diff_mean)
