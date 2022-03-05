@@ -37,6 +37,9 @@ If you want to install the package for development. Please run:
 
 .. code-block::
 
+    conda env create -f environment.yml
+    conda activate polyphony-env
+
     make install-develop
 
 How to use
