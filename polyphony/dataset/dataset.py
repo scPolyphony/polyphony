@@ -1,6 +1,7 @@
 import copy
 import json
 import os
+import numpy as np
 
 import anndata
 
@@ -70,7 +71,7 @@ class Dataset:
 
     @anchor_mat.setter
     def anchor_mat(self, anchor_mat):
-        self._adata.obsm[self._anchor_key] = anchor_mat
+        self._adata.obsm[self._anchor_key] = anchor_mat.astype(np.dtype('<f4'))
 
     @property
     def umap(self):
