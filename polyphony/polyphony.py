@@ -1,45 +1,42 @@
 """Main module."""
 import os
 
+import numpy as np
+import pandas as pd
+from sklearn.neighbors import KNeighborsClassifier
+
 from polyphony.anchor_recom import HarmonyAnchorRecommender
+from polyphony.dataset import QueryDataset, ReferenceDataset
 from polyphony.models import ActiveSCVI
-from polyphony.protocol import TopSelectorProtocol
 from polyphony.utils.dir import DATA_DIR
 
 
 class Polyphony:
     def __init__(
         self,
-        ref_dataset,
-        query_dataset,
-        problem_id='example',
-
-        batch_key='batch',
-        latent_key='latent',
+        ref_dataset: ReferenceDataset,
+        query_dataset: QueryDataset,
+        problem_id: str,
 
         model_cls=ActiveSCVI,
         recommender_cls=HarmonyAnchorRecommender,
-        # protocol_cls=TopSelectorProtocol,
-
-        working_dir=None
+        classifier_cls=KNeighborsClassifier,
     ):
 
         self._ref_dataset = ref_dataset
         self._query_dataset = query_dataset
 
         self._model_cls = model_cls
-        self._batch_key = batch_key
-        self._latent_key = latent_key
 
         self._ref_model = None
         self._query_model = None
         self._update_query_models = dict()
+        self._classifier = classifier_cls()
 
         self._anchor_recom = recommender_cls(self._ref_dataset, self._query_dataset)
-        # self._protocol = protocol_cls(self._anchor_recommender, self._anchoring_step)
         self._update_id = 0
 
-        self._working_dir = working_dir if working_dir else os.path.join(DATA_DIR, problem_id)
+        self._working_dir = os.path.join(DATA_DIR, problem_id)
         self._ref_model_path = os.path.join(self._working_dir, 'model', 'ref_model')
         self._query_model_path = os.path.join(self._working_dir, 'model', 'surgery_model')
 
@@ -51,45 +48,46 @@ class Polyphony:
         os.makedirs(os.path.join(self._working_dir, 'data'), exist_ok=True)
 
     @property
-    def ref_dataset(self):
+    def ref(self):
         return self._ref_dataset
 
     @property
-    def query_dataset(self):
+    def query(self):
         return self._query_dataset
 
     @property
-    def reference_adata(self):
-        return self._ref_dataset.adata
-
-    @property
-    def query_adata(self):
-        return self._query_dataset.adata
-
-    @property
     def full_adata(self):
-        return self.reference_adata.concatenate(self.query_adata)
+        return self.ref.adata.concatenate(self.query.adata)
 
     def setup_data(self):
-        self._model_cls.setup_anndata(self.reference_adata, batch_key=self._batch_key)
-        self._model_cls.setup_anndata(self.query_adata, batch_key=self._batch_key)
+        self._model_cls.setup_anndata(self.ref.adata, batch_key=self.ref._batch_key)
+        self._model_cls.setup_anndata(self.query.adata, batch_key=self.query._batch_key)
 
     def init_reference_step(self, **kwargs):
         self._build_reference_latent(**kwargs)
         self._build_query_latent(**kwargs)
+        self._fit_classifier()
 
     def anchor_recom_step(self):
         self._anchor_recom.recommend_anchors()
 
     def anchor_update_step(self, query_anchor_mat, **kwargs):
         self._query_dataset.anchor_mat = query_anchor_mat
-        self._model_cls.setup_anchor_rep(self.ref_dataset, self.query_dataset)
+        self._model_cls.setup_anchor_rep(self.ref, self.query)
         self._update_id += 1
         self._build_anchored_latent(**kwargs)
+        self._fit_classifier()
 
     def umap_transform(self, udpate_reference=True, update_query=True):
-        udpate_reference and self.ref_dataset.umap_transform()
-        update_query and self.query_dataset.umap_transform(model=self.ref_dataset.embedder)
+        udpate_reference and self.ref.umap_transform()
+        update_query and self.query.umap_transform(model=self.ref.embedder)
+
+    def _fit_classifier(self):
+        labeled_index = self.query.obs[self.query.label == self.query.label].index  # non-NaN
+        X = np.concatenate([self.ref.latent, self.query.latent[labeled_index]])
+        y = np.concatenate([self.ref.cell_type, self.query.label[labeled_index]])
+        self._classifier.fit(X, y)
+        self.query.prediction = self._classifier.predict(self.query.latent)
 
     def _save_model(self, model_token):
         if model_token == 'ref':
@@ -104,17 +102,17 @@ class Polyphony:
         if model_token == 'ref':
             self._ref_model = self._model_cls.load(
                 dir_path=self._ref_model_path,
-                adata=self.reference_adata
+                adata=self.ref.adata
             )
         elif model_token == 'query':
             self._query_model = self._model_cls.load(
                 dir_path=self._query_model_path,
-                adata=self.query_adata
+                adata=self.query.adata
             )
         else:
             self._update_query_models[model_token] = self._model_cls.load(
                 dir_path=os.path.join(self._working_dir, model_token),
-                adata=self.query_adata
+                adata=self.query.adata
             )
 
     def _build_ref_model(self, load_exist=True, train=True, save=True, **train_kwargs):
@@ -123,7 +121,7 @@ class Polyphony:
         else:
             # TODO: move the training parameters to a public function
             self._ref_model = self._model_cls(
-                self.reference_adata,
+                self.ref.adata,
                 n_layers=2,
                 encode_covariates=True,
                 deeply_inject_covariates=False,
@@ -139,7 +137,7 @@ class Polyphony:
             self._load_model('query')
         else:
             self._query_model = self._model_cls.load_query_data(
-                self.query_adata,
+                self.query.adata,
                 self._ref_model_path,
                 freeze_dropout=True,
             )
@@ -153,7 +151,7 @@ class Polyphony:
             self._load_model(update_id)
         else:
             self._update_query_models[update_id] = self._model_cls.load_query_data(
-                self.query_adata,
+                self.query.adata,
                 self._ref_model_path,
                 freeze_dropout=True,
             )

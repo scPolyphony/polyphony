@@ -16,7 +16,9 @@ class Dataset:
         self,
         adata,
         dataset_id='dataset',
+
         batch_key='batch',
+        cell_type_key='cell_type',
         latent_key='latent',
         anchor_key='anchor_cluster',
         working_dir=DATA_DIR
@@ -25,6 +27,7 @@ class Dataset:
         self._dataset_id = dataset_id
 
         self._batch_key = batch_key
+        self._cell_type_key = cell_type_key
         self._latent_key = latent_key
         self._anchor_key = anchor_key
 
@@ -63,6 +66,10 @@ class Dataset:
     @property
     def batch(self):
         return self._adata.obs[self._batch_key]
+
+    @property
+    def cell_type(self):
+        return self._adata.obs[self._cell_type_key]
 
     @property
     def anchor_mat(self):
