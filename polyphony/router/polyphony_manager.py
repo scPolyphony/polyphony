@@ -26,13 +26,13 @@ class PolyphonyManager:
     def init_round(self, save=True):
         self._pp.setup_data()
         self._pp.init_reference_step()
-        self._pp.anchor_update_step()
+        self._pp.anchor_recom_step()
         self._pp.umap_transform()
         save and self.save_ann()
 
     def save_ann(self, dataset=None):
         dataset = ['query', 'reference'] if dataset is None else dataset
         if 'query' in dataset:
-            self._pp.query_dataset.save_adata(os.path.join(self._folders['zarr'], 'query.zarr'))
+            self._pp.query.save_adata(os.path.join(self._folders['zarr'], 'query.zarr'))
         if 'reference' in dataset:
-            self._pp.ref_dataset.save_adata(os.path.join(self._folders['zarr'], 'reference.zarr'))
+            self._pp.ref.save_adata(os.path.join(self._folders['zarr'], 'reference.zarr'))
