@@ -10,12 +10,16 @@ class HarmonyAnchorRecommender(AnchorRecommender):
 
     def recommend_anchors(self, **kwargs):
         hm = run_harmony(
-            np.concatenate([self.ref_latent, self.query_latent]),
-            pd.concat([self.ref_obs, self.query_obs]),
-            self._source_key,
+            np.concatenate([self._ref.latent, self._query.latent]),
+            pd.concat([self._ref.obs, self._query.obs]),
+            'source',
+            max_iter_harmony=0,
+            nclust=20,
             **kwargs
         )
 
-        n_ref = len(self.ref_obs)
-        self._ref_dataset.anchor_mat = hm.R[:, :n_ref].T
-        self._query_dataset.anchor_mat = hm.R[:, n_ref:].T
+        n_ref = len(self._ref.obs)
+        self._ref.anchor_mat = hm.R[:, :n_ref].T
+        self._query.anchor_mat = hm.R[:, n_ref:].T
+        self._ref.anchor_cluster = self._ref.anchor_mat.argmax(axis=1).astype('str')
+        self._query.anchor_cluster = self._query.anchor_mat.argmax(axis=1).astype('str')

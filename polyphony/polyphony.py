@@ -2,7 +2,6 @@
 import os
 
 import numpy as np
-import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 
 from polyphony.anchor_recom import HarmonyAnchorRecommender
@@ -39,13 +38,11 @@ class Polyphony:
         self._working_dir = os.path.join(DATA_DIR, problem_id)
         self._ref_model_path = os.path.join(self._working_dir, 'model', 'ref_model')
         self._query_model_path = os.path.join(self._working_dir, 'model', 'surgery_model')
+        self._umap_model_path = os.path.join(self._working_dir, 'model', 'umap')
 
-        self._ref_dataset.working_dir = os.path.join(self._working_dir, 'data')
-        self._query_dataset.working_dir = os.path.join(self._working_dir, 'data')
-
-        os.makedirs(self._working_dir, exist_ok=True)
-        os.makedirs(os.path.join(self._working_dir, 'model'), exist_ok=True)
-        os.makedirs(os.path.join(self._working_dir, 'data'), exist_ok=True)
+        dirs = [os.path.join(self._working_dir, 'model'), os.path.join(self._working_dir, 'data')]
+        for dir in dirs:
+            os.makedirs(dir, exist_ok=True)
 
     @property
     def ref(self):
@@ -79,7 +76,7 @@ class Polyphony:
         self._fit_classifier()
 
     def umap_transform(self, udpate_reference=True, update_query=True):
-        udpate_reference and self.ref.umap_transform()
+        udpate_reference and self.ref.umap_transform(dir_name=self._umap_model_path)
         update_query and self.query.umap_transform(model=self.ref.embedder)
 
     def _fit_classifier(self):
