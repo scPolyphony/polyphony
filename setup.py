@@ -15,7 +15,7 @@ install_requires = [
     'scikit-learn>=1.0.2',
     'scanpy>=1.8.2',
     'scipy>=1.7.3',
-    'scvi-tools==0.14.6'
+    'scvi-tools==0.14.6',
     'scarches>=0.4.0',
     'tensorflow>=2.0',
     'umap-learn<=0.5.2',
