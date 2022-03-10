@@ -3,7 +3,7 @@ from flask_cors import CORS
 
 from polyphony.router.routes import add_routes
 from polyphony.router.polyphony_manager import PolyphonyManager
-from polyphony.router.utils import SERVER_STATIC_DIR
+from polyphony.router.utils import NpEncoder, SERVER_STATIC_DIR
 
 
 def create_app(problem_id):
@@ -17,6 +17,7 @@ def create_app(problem_id):
         template_folder='../../apidocs'
     )
 
+    app.json_encoder = NpEncoder
     app.pm = pm
 
     CORS(app, resources={r"/api/*": {"origins": "*"}, r"/files/*": {"origins": "*"}})
