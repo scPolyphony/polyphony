@@ -23,6 +23,7 @@ class Dataset:
 
         anchor_mat_key='anchor_mat',
         anchor_set_key='anchor_cluster',
+        anchor_dist_key='anchor_dist'
     ):
         self._adata = adata
         self._dataset_id = dataset_id
@@ -32,6 +33,7 @@ class Dataset:
         self._latent_key = latent_key
         self._anchor_mat_key = anchor_mat_key
         self._anchor_set_key = anchor_set_key
+        self._anchor_dist_key = anchor_dist_key
 
         self._embedder = None
 
@@ -86,6 +88,14 @@ class Dataset:
     @anchor_cluster.setter
     def anchor_cluster(self, anchor_set):
         self._adata.obs[self._anchor_set_key] = anchor_set
+
+    @property
+    def anchor_dist(self):
+        return self._adata.obs[self._anchor_dist_key]
+
+    @anchor_dist.setter
+    def anchor_dist(self, anchor_dist):
+        self._adata.obs[self._anchor_dist_key] = anchor_dist
 
     @property
     def umap(self):
