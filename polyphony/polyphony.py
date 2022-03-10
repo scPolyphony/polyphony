@@ -65,8 +65,8 @@ class Polyphony:
         self._build_query_latent(**kwargs)
         self._fit_classifier()
 
-    def anchor_recom_step(self):
-        self._anchor_recom.recommend_anchors()
+    def anchor_recom_step(self, **kwargs):
+        self._anchor_recom.recommend_anchors(**kwargs)
 
     def anchor_update_step(self, query_anchor_mat, **kwargs):
         self._query_dataset.anchor_mat = query_anchor_mat
@@ -112,7 +112,7 @@ class Polyphony:
                 adata=self.query.adata
             )
 
-    def _build_ref_model(self, load_exist=True, train=True, save=True, **train_kwargs):
+    def _build_ref_model(self, load_exist=True, save=True, **train_kwargs):
         if load_exist and os.path.exists(self._ref_model_path):
             self._load_model('ref')
         else:
@@ -125,11 +125,10 @@ class Polyphony:
                 use_layer_norm="both",
                 use_batch_norm="none",
             )
-            if train:
-                self._ref_model.train(**train_kwargs)
-                save and self._save_model('ref')
+            self._ref_model.train(**train_kwargs)
+            save and self._save_model('ref')
 
-    def _build_query_model(self, load_exist=True, train=True, save=True, **train_kwargs):
+    def _build_query_model(self, load_exist=True, save=True, **train_kwargs):
         if load_exist and os.path.exists(self._query_model_path):
             self._load_model('query')
         else:
@@ -138,12 +137,10 @@ class Polyphony:
                 self._ref_model_path,
                 freeze_dropout=True,
             )
-            if train:
-                self._query_model.train(**train_kwargs)
-                save and self._save_model('query')
+            self._query_model.train(**train_kwargs)
+            save and self._save_model('query')
 
-    def _build_anchored_model(self, update_id='query_update', load_exist=False, train=True,
-                              save=True, **train_kwargs):
+    def _build_anchored_model(self, update_id, load_exist=False, save=True, **train_kwargs):
         if load_exist and os.path.exists(os.path.join(self._working_dir, update_id)):
             self._load_model(update_id)
         else:
@@ -152,9 +149,8 @@ class Polyphony:
                 self._ref_model_path,
                 freeze_dropout=True,
             )
-            if train:
-                self._update_query_models[update_id].train(**train_kwargs)
-                save and self._save_model(update_id)
+            self._update_query_models[update_id].train(**train_kwargs)
+            save and self._save_model(update_id)
 
     def _build_reference_latent(self, **kwargs):
         self._build_ref_model(**kwargs)
@@ -164,8 +160,8 @@ class Polyphony:
         self._build_query_model(**kwargs)
         self._query_dataset.latent = self._query_model.get_latent_representation()
 
-    def _build_anchored_latent(self, load_exist=False, **kwargs):
-        update_id = str(self._update_id)
-        self._build_anchored_model(update_id=update_id, load_exist=load_exist, **kwargs)
+    def _build_anchored_latent(self, **kwargs):
+        update_id = "query_iter-{}".format(self._update_id)
+        self._build_anchored_model(update_id=update_id, **kwargs)
         self._query_dataset.latent = self._update_query_models[update_id] \
             .get_latent_representation()
