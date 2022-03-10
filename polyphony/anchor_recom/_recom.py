@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from abc import ABC, abstractmethod
 
@@ -20,8 +21,11 @@ class AnchorRecommender(ABC):
         self._recommend_anchors(*args, **kwargs)
 
         # assign cluster ids to cell and query data
-        self._ref.anchor_cluster = self._ref.anchor_mat.argmax(axis=1).astype('str')
-        self._query.anchor_cluster = self._query.anchor_mat.argmax(axis=1).astype('str')
+        self._ref.anchor_cluster = self._ref.anchor_mat.argmax(axis=1)
+        self._ref.anchor_cluster = self._ref.anchor_cluster.astype('str').astype('category')
+
+        self._query.anchor_cluster = self._query.anchor_mat.argmax(axis=1)
+        self._query.anchor_cluster = self._query.anchor_cluster.astype('str').astype('category')
 
         # calculate the distance of each query cell to its corresponding reference cluster's center
         ref_stat = cluster_agg(self._ref.latent, self._ref.anchor_mat.T)

@@ -8,6 +8,7 @@ from polyphony.anchor_recom import HarmonyAnchorRecommender
 from polyphony.dataset import QueryDataset, ReferenceDataset
 from polyphony.models import ActiveSCVI
 from polyphony.utils.dir import DATA_DIR
+from polyphony.utils.gene import rank_genes_groups
 
 
 class Polyphony:
@@ -68,8 +69,13 @@ class Polyphony:
     def anchor_recom_step(self, **kwargs):
         self._anchor_recom.recommend_anchors(**kwargs)
 
-    def anchor_update_step(self, query_anchor_mat, **kwargs):
-        self._query_dataset.anchor_mat = query_anchor_mat
+    def label_step(self, labels, retrain=True):
+        self.query.label = labels
+        retrain and self._fit_classifier()
+
+    def anchor_update_step(self, ref_anchor_mat, query_anchor_mat, **kwargs):
+        self.ref.anchor_mat = ref_anchor_mat
+        self.query.anchor_mat = query_anchor_mat
         self._model_cls.setup_anchor_rep(self.ref, self.query)
         self._update_id += 1
         self._build_anchored_latent(**kwargs)
@@ -78,6 +84,10 @@ class Polyphony:
     def umap_transform(self, udpate_reference=True, update_query=True):
         udpate_reference and self.ref.umap_transform(dir_name=self._umap_model_path)
         update_query and self.query.umap_transform(model=self.ref.embedder)
+
+    def update_differential_genes(self, **kwargs):
+        rank_genes_groups(self.ref.adata, **kwargs)
+        rank_genes_groups(self.query.adata, **kwargs)
 
     def _fit_classifier(self):
         labeled_index = self.query.obs[self.query.label == self.query.label].index  # non-NaN
