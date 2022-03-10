@@ -9,6 +9,9 @@ from polyphony.dataset import Dataset
 from polyphony.models import ActiveVAE
 from polyphony.utils.math import cluster_agg
 
+UPDATE_KEY = '_scvi_cell_update'
+REP_KEY = '_scvi_desired_rep'
+
 
 class ActiveSCVI(SCVI):
     def __init__(
@@ -74,31 +77,27 @@ class ActiveSCVI(SCVI):
 
         # Register `update_key`, which indicates whether the cell's latent vector has
         # already be given
-        update_key = 'cell_update'
-        rep_key = 'desired_rep'
         data_registry = adata.uns['_scvi']['data_registry']
 
         # Fill the (whether to) update field with False
-        if update_key not in adata.obs.keys():
-            adata.obs[update_key] = False
-        data_registry['cell_update'] = {'attr_name': 'obs', 'attr_key': update_key}
+        if UPDATE_KEY not in adata.obs.keys():
+            adata.obs[UPDATE_KEY] = False
+        data_registry['cell_update'] = {'attr_name': 'obs', 'attr_key': UPDATE_KEY}
 
         # Register `update_rep_key` in `adata.obsm`, which includes cells' (desired) latent vectors
-        if rep_key not in adata.obsm.keys():
-            adata.obsm[rep_key] = np.zeros([len(adata), n_latent])
+        if REP_KEY not in adata.obsm.keys():
+            adata.obsm[REP_KEY] = np.zeros([len(adata), n_latent])
 
         # TODO: registering obsm keys is not supported by the `_setup_anndata` function in
         #  scvi-tool == 14.6. So it is manually done.
-        data_registry['desired_rep'] = {'attr_name': 'obsm', 'attr_key': rep_key}
+        data_registry['desired_rep'] = {'attr_name': 'obsm', 'attr_key': REP_KEY}
 
     @staticmethod
     def setup_anchor_rep(
         ref_dataset: Dataset,
         query_dataset: Dataset,
     ):
-        update_key = 'cell_update'
-        rep_key = 'desired_rep'
-        query_dataset.obs[update_key] = (query_dataset.anchor_mat > (1 - 10 ** -3)).sum(axis=1)
+        query_dataset.obs[UPDATE_KEY] = (query_dataset.anchor_mat > (1 - 10 ** -3)).sum(axis=1)
 
         ref_stat = cluster_agg(ref_dataset.latent, ref_dataset.anchor_mat.T)
         query_stat = cluster_agg(query_dataset.latent, query_dataset.anchor_mat.T)
@@ -109,5 +108,5 @@ class ActiveSCVI(SCVI):
 
         cluster_index = diff_mean.index
 
-        query_dataset.obsm[rep_key] = query_dataset.latent + np.dot(
+        query_dataset.obsm[REP_KEY] = query_dataset.latent + np.dot(
             query_dataset.anchor_mat[:, cluster_index], diff_mean)
