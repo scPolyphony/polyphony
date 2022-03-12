@@ -4,7 +4,7 @@ import os
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 
-from polyphony.anchor_recom import HarmonyAnchorRecommender
+from polyphony.anchor_recom import SymphonyAnchorRecommender
 from polyphony.dataset import QueryDataset, ReferenceDataset
 from polyphony.models import ActiveSCVI
 from polyphony.utils.dir import DATA_DIR
@@ -19,7 +19,7 @@ class Polyphony:
         problem_id: str,
 
         model_cls=ActiveSCVI,
-        recommender_cls=HarmonyAnchorRecommender,
+        recommender_cls=SymphonyAnchorRecommender,
         classifier_cls=KNeighborsClassifier,
     ):
 
@@ -73,10 +73,9 @@ class Polyphony:
         self.query.label = labels
         retrain and self._fit_classifier()
 
-    def anchor_update_step(self, ref_anchor_mat, query_anchor_mat, **kwargs):
-        self.ref.anchor_mat = ref_anchor_mat
-        self.query.anchor_mat = query_anchor_mat
-        self._model_cls.setup_anchor_rep(self.ref, self.query)
+    def anchor_update_step(self, query_mask=None, **kwargs):
+        self._model_cls.setup_anchor_rep(self.query, self._anchor_recom.compression_terms,
+                                         query_mask)
         self._update_id += 1
         self._build_anchored_latent(**kwargs)
         self._fit_classifier()
