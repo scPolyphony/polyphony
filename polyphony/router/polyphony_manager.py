@@ -71,7 +71,8 @@ class PolyphonyManager:
         for idx in cluster_index:
             ref_index = ref_anchor_cluster[ref_anchor_cluster == idx].index
             query_index = query_anchor_cluster[query_anchor_cluster == idx].index
-            query_info = pd.concat([self._pp.query.anchor_dist, self._pp.query.prediction]).to_dict()
+            query_info = pd.DataFrame([self._pp.query.anchor_dist,
+                                       self._pp.query.prediction]).T.to_dict('index')
             differential_genes = dict(
                 ref=get_differential_genes(self._pp.ref.adata, idx),
                 query=get_differential_genes(self._pp.query.adata, idx)
