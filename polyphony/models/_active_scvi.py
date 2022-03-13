@@ -101,7 +101,7 @@ class ActiveSCVI(SCVI):
         query_mask=None,
         lamb: Optional[int] = None
     ):
-        if query_mask:
+        if query_mask is not None:
             anchor_mat = query_mask * query_dataset.anchor_mat
         else:
             anchor_mat = query_dataset.anchor_mat
