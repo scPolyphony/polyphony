@@ -31,7 +31,7 @@ class AnchorRecommender(ABC):
         self.build_or_update_anchor()
 
     def build_anchor_ref(self):
-        if self._anchor_ref_build_flag is None:
+        if self._anchor_ref_build_flag is False:
             # assign cluster ids to ref cells
             self._ref.anchor_cluster = self._ref.anchor_mat.argmax(axis=1)
             self._ref.anchor_cluster = self._ref.anchor_cluster.astype('str').astype('category')
