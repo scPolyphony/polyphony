@@ -18,3 +18,4 @@ def add_routes(app, static_dir):
     @app.route('/api/model_update')
     def model_update():
         current_app.pm.update_round()
+        return 'success'
