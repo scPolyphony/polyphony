@@ -70,13 +70,30 @@ class Polyphony:
     def anchor_recom_step(self, **kwargs):
         self._anchor_recom.recommend_anchors(**kwargs)
 
-    def label_step(self, labels, retrain=True):
+    def _update_anchor(self, anchor_ids):
+        pass
+
+    def refine_anchor(self, anchor):
+        raise NotImplementedError
+
+    def label_anchor(self, anchor_id, label):
+        raise NotImplementedError
+
+    def register_anchor(self, anchor):
+        raise NotImplementedError
+
+    def delete_anchor(self, anchor_id):
+        raise NotImplementedError
+
+    def confirm_anchor(self, anchor_id):
+        raise NotImplementedError
+
+    def _label_step(self, labels, retrain=True):
         self.query.label = labels
         retrain and self._fit_classifier()
 
-    def anchor_update_step(self, query_mask=None, max_epochs=100, batch_size=256, **kwargs):
-        self._model_cls.setup_anchor_rep(self.query, self._anchor_recom.compression_terms,
-                                         query_mask)
+    def model_update_step(self, max_epochs=100, batch_size=256, **kwargs):
+        self._model_cls.setup_anchor_rep(self.query, self._anchor_recom.compression_terms)
         self._update_id += 1
         self._build_anchored_latent(max_epochs=max_epochs, batch_size=batch_size, **kwargs)
         self._fit_classifier()
