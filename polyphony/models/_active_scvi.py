@@ -8,7 +8,7 @@ from scarches.models import SCVI
 from scvi.model._utils import _init_library_size
 from scvi._compat import Literal
 
-from polyphony.dataset import Dataset
+from polyphony.dataset import QueryDataset
 from polyphony.models import ActiveVAE
 
 UPDATE_KEY = '_scvi_cell_update'
@@ -96,16 +96,16 @@ class ActiveSCVI(SCVI):
 
     @staticmethod
     def setup_anchor_rep(
-        query_dataset: Dataset,
+        query_dataset: QueryDataset,
         compression_terms,
-        query_mask=None,
         lamb: Optional[int] = None
     ):
-        if query_mask is not None:
-            anchor_mat = query_mask * query_dataset.anchor_mat
-        else:
-            anchor_mat = query_dataset.anchor_mat
-
+        assign_mask = np.zeros(query_dataset.anchor_mat.shape)
+        for anchor in query_dataset.anchor['confirmed']:
+            cells = [info['cell_id'] for info in anchor['cells']]
+            cell_loc = query_dataset.obs.index.get_loc(cells)
+            assign_mask[cell_loc, anchor['anchor_ref_id']] = 1
+        anchor_mat = assign_mask * query_dataset.anchor_mat
         query_dataset.obs[UPDATE_KEY] = anchor_mat.sum(axis=1) > 1e-3
         phi = pd.get_dummies(query_dataset.batch).to_numpy().T
         phi_moe = np.vstack((np.repeat(1, phi.shape[1]), phi))
