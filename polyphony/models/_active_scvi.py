@@ -1,13 +1,15 @@
+from typing import List, Optional
+
 import numpy as np
+import pandas as pd
 
 from anndata import AnnData
 from scarches.models import SCVI
 from scvi.model._utils import _init_library_size
 from scvi._compat import Literal
 
-from polyphony.dataset import Dataset
+from polyphony.dataset import QueryDataset
 from polyphony.models import ActiveVAE
-from polyphony.utils.math import cluster_agg
 
 UPDATE_KEY = '_scvi_cell_update'
 REP_KEY = '_scvi_desired_rep'
@@ -94,19 +96,35 @@ class ActiveSCVI(SCVI):
 
     @staticmethod
     def setup_anchor_rep(
-        ref_dataset: Dataset,
-        query_dataset: Dataset,
+        query_dataset: QueryDataset,
+        compression_terms,
+        lamb: Optional[int] = None
     ):
-        query_dataset.obs[UPDATE_KEY] = (query_dataset.anchor_mat > (1 - 10 ** -3)).sum(axis=1)
+        assign_mask = np.zeros(query_dataset.anchor_mat.shape)
+        for anchor in query_dataset.anchor['confirmed']:
+            cells = [info['cell_id'] for info in anchor['cells']]
+            cell_loc = query_dataset.obs.index.get_loc(cells)
+            assign_mask[cell_loc, anchor['anchor_ref_id']] = 1
+        anchor_mat = assign_mask * query_dataset.anchor_mat
+        query_dataset.obs[UPDATE_KEY] = anchor_mat.sum(axis=1) > 1e-3
+        phi = pd.get_dummies(query_dataset.batch).to_numpy().T
+        phi_moe = np.vstack((np.repeat(1, phi.shape[1]), phi))
+        lamb = 1 if lamb is None else lamb
 
-        ref_stat = cluster_agg(ref_dataset.latent, ref_dataset.anchor_mat.T)
-        query_stat = cluster_agg(query_dataset.latent, query_dataset.anchor_mat.T)
+        query_dataset.obsm[REP_KEY] = symphony_correct(query_dataset.latent, anchor_mat.T,
+                                                       compression_terms, phi_moe, lamb)
 
-        ref_mean = ref_stat[ref_stat.columns[::2]].fillna(0)
-        query_mean = query_stat[query_stat.columns[::2]].fillna(0)
-        diff_mean = (ref_mean - query_mean).fillna(0)
 
-        cluster_index = diff_mean.index
-
-        query_dataset.obsm[REP_KEY] = query_dataset.latent + np.dot(
-            query_dataset.anchor_mat[:, cluster_index], diff_mean)
+def symphony_correct(latent, R, compression_terms, phi_moe, lamb):
+    N = compression_terms['N']
+    C = compression_terms['C']
+    updated_latent = latent.copy()
+    for i in range(R.shape[0]):
+        E = np.dot(np.dot(phi_moe, np.diag(R[i, :])), phi_moe.T)
+        E[0, 0] += N[i]
+        F = np.dot(np.dot(phi_moe, np.diag(R[i, :])), latent)
+        F[0, :] += C[i, :]
+        B = np.dot(np.linalg.inv(E + np.diag([lamb] * E.shape[0])), F)
+        B[0, :] = 0
+        updated_latent -= np.dot(np.dot(B.T, phi_moe), np.diag(R[i, :])).T
+    return updated_latent

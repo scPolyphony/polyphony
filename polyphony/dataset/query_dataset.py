@@ -7,6 +7,7 @@ class QueryDataset(Dataset):
         self._adata.obs['source'] = 'query'
         self._adata.obs['label'] = None
         self._adata.obs['prediction'] = None
+        self._adata.uns['anchor'] = None
 
     @property
     def source(self):
@@ -27,3 +28,11 @@ class QueryDataset(Dataset):
     @prediction.setter
     def prediction(self, prediction):
         self._adata.obs['prediction'] = prediction
+
+    @property
+    def anchor(self):
+        return self._adata.uns['anchor']
+
+    @anchor.setter
+    def anchor(self, anchor):
+        self._adata.uns['anchor'] = anchor

@@ -16,10 +16,10 @@ class ActiveVAE(VAE):
         kl_weight: float = 1.0,
     ):
         cell_update = tensors['cell_update'].squeeze().type(torch.bool)
-        desired_rep = tensors['desired_rep']
-        rep = inference_outputs['z']
+        desired_rep = tensors['desired_rep'][cell_update]
+        rep = inference_outputs['z'][cell_update]
 
-        anchor_loss = torch.linalg.norm(desired_rep[cell_update] - rep[cell_update], dim=1).sum()
+        anchor_loss = torch.linalg.norm(desired_rep - rep, dim=1).sum()
 
         old_loss_record = VAE.loss(
             self,
