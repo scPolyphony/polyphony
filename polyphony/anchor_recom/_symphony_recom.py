@@ -32,7 +32,7 @@ class SymphonyAnchorRecommender(AnchorRecommender):
     def compression_terms(self):
         return self._compression_terms
 
-    def _recommend_anchors(self, **kwargs):
+    def _calc_anchor_assign_prob(self, **kwargs):
         if self._reference_cluster_centers is None:
             hm = run_harmony(
                 self._ref.latent,
