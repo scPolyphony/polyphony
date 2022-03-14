@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 
@@ -32,31 +33,30 @@ class PolyphonyManager:
         self._pp.init_reference_step()
         self._pp.anchor_recom_step()
         self._pp.umap_transform()
-        self._pp.update_differential_genes()
         save and self.save_ann()
 
     def update_round(self, param, save=True):
-        anchors = param.get('anchors', [])
-
-        labels = pd.Series(index=self._pp.query.index)
-        ref_anchor_mat = pd.DataFrame(index=self._pp.query.index)
-        query_anchor_mat = pd.DataFrame(index=self._pp.query.index)
-        for i, anchor in enumerate(anchors):
-            anchor_id = anchor.get('id', str(i))
-            ref_index = anchor.get('ref_index', [])
-            ref_anchor_mat[anchor_id] = 0
-            ref_anchor_mat.loc[ref_index, anchor_id] = 1
-
-            query_index = anchor.get('query_index', [])
-            query_anchor_mat[anchor_id] = 0
-            query_anchor_mat.loc[query_index, anchor_id] = 1
-            labels.loc[query_index] = self._pp.query.labels.loc[query_index]
-
-        self._pp.anchor_update_step(ref_anchor_mat, query_anchor_mat)
-        self._pp.label_step(labels)
-
-        self._pp.umap_transform()
-        self._pp.update_differential_genes()
+        # anchors = param.get('anchors', [])
+        #
+        # labels = pd.Series(index=self._pp.query.index)
+        # ref_anchor_mat = pd.DataFrame(index=self._pp.query.index)
+        # query_anchor_mat = pd.DataFrame(index=self._pp.query.index)
+        # for i, anchor in enumerate(anchors):
+        #     anchor_id = anchor.get('id', str(i))
+        #     ref_index = anchor.get('ref_index', [])
+        #     ref_anchor_mat[anchor_id] = 0
+        #     ref_anchor_mat.loc[ref_index, anchor_id] = 1
+        #
+        #     query_index = anchor.get('query_index', [])
+        #     query_anchor_mat[anchor_id] = 0
+        #     query_anchor_mat.loc[query_index, anchor_id] = 1
+        #     labels.loc[query_index] = self._pp.query.labels.loc[query_index]
+        #
+        # self._pp.anchor_update_step(ref_anchor_mat, query_anchor_mat)
+        # self._pp.label_step(labels)
+        #
+        # self._pp.umap_transform()
+        # self._pp.update_differential_genes()
 
         save and self.save_ann()
 
@@ -95,6 +95,11 @@ class PolyphonyManager:
     def save_ann(self, dataset=None):
         dataset = ['query', 'reference'] if dataset is None else dataset
         if 'query' in dataset:
-            self._pp.query.save_adata(os.path.join(self._folders['zarr'], 'query.zarr'))
+            query = copy.deepcopy(self._pp.query)
+            query.anchor = json.dumps(query.anchor)
+            query.save_adata(os.path.join(self._folders['zarr'], 'query.zarr'))
+            file_path = os.path.join(self._folders['json'], 'query_anchor.json')
+            with open(file_path, 'w') as f:
+                f.write(query.anchor)
         if 'reference' in dataset:
             self._pp.ref.save_adata(os.path.join(self._folders['zarr'], 'reference.zarr'))

@@ -33,8 +33,8 @@ def get_differential_genes(
         return []
     else:
         cluster_iidx = valid_cluster.index(cluster_idx)
-        scores = adata.uns['rank_genes_groups']['_scores'][cluster_iidx, :topk]
-        names = adata.uns['rank_genes_groups']['_names'][cluster_iidx, :topk]
+        scores = adata.uns['rank_genes_groups']['_scores'][cluster_iidx, :topk].tolist()
+        names = adata.uns['rank_genes_groups']['_names'][cluster_iidx, :topk].tolist()
         if return_type == 'dict':
             return [dict(name_indice=gene, score=score) for gene, score in zip(names, scores)]
         else:
