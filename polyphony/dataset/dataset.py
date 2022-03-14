@@ -70,6 +70,10 @@ class Dataset:
         return self._adata.obs[self._batch_key]
 
     @property
+    def batch_key(self):
+        return self._batch_key
+
+    @property
     def cell_type(self):
         return self._adata.obs[self._cell_type_key]
 

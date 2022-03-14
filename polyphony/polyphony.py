@@ -1,10 +1,11 @@
 """Main module."""
+import copy
 import os
 
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 
-from polyphony.anchor_recom import HarmonyAnchorRecommender
+from polyphony.anchor_recom import SymphonyAnchorRecommender
 from polyphony.dataset import QueryDataset, ReferenceDataset
 from polyphony.models import ActiveSCVI
 from polyphony.utils.dir import DATA_DIR
@@ -19,7 +20,7 @@ class Polyphony:
         problem_id: str,
 
         model_cls=ActiveSCVI,
-        recommender_cls=HarmonyAnchorRecommender,
+        recommender_cls=SymphonyAnchorRecommender,
         classifier_cls=KNeighborsClassifier,
     ):
 
@@ -73,12 +74,11 @@ class Polyphony:
         self.query.label = labels
         retrain and self._fit_classifier()
 
-    def anchor_update_step(self, ref_anchor_mat, query_anchor_mat, **kwargs):
-        self.ref.anchor_mat = ref_anchor_mat
-        self.query.anchor_mat = query_anchor_mat
-        self._model_cls.setup_anchor_rep(self.ref, self.query)
+    def anchor_update_step(self, query_mask=None, max_epochs=100, batch_size=256, **kwargs):
+        self._model_cls.setup_anchor_rep(self.query, self._anchor_recom.compression_terms,
+                                         query_mask)
         self._update_id += 1
-        self._build_anchored_latent(**kwargs)
+        self._build_anchored_latent(max_epochs=max_epochs, batch_size=batch_size, **kwargs)
         self._fit_classifier()
 
     def umap_transform(self, udpate_reference=True, update_query=True):
@@ -150,18 +150,6 @@ class Polyphony:
             self._query_model.train(**train_kwargs)
             save and self._save_model('query')
 
-    def _build_anchored_model(self, update_id, load_exist=False, save=True, **train_kwargs):
-        if load_exist and os.path.exists(os.path.join(self._working_dir, update_id)):
-            self._load_model(update_id)
-        else:
-            self._update_query_models[update_id] = self._model_cls.load_query_data(
-                self.query.adata,
-                self._ref_model_path,
-                freeze_dropout=True,
-            )
-            self._update_query_models[update_id].train(**train_kwargs)
-            save and self._save_model(update_id)
-
     def _build_reference_latent(self, **kwargs):
         self._build_ref_model(**kwargs)
         self._ref_dataset.latent = self._ref_model.get_latent_representation()
@@ -170,8 +158,15 @@ class Polyphony:
         self._build_query_model(**kwargs)
         self._query_dataset.latent = self._query_model.get_latent_representation()
 
-    def _build_anchored_latent(self, **kwargs):
+    def _build_anchored_latent(self, max_epochs=100, batch_size=512, save=True, **kwargs):
         update_id = "query_iter-{}".format(self._update_id)
-        self._build_anchored_model(update_id=update_id, **kwargs)
+        self._update_query_models[update_id] = copy.deepcopy(self._query_model)
+        self._update_query_models[update_id].train(
+            max_epochs=max_epochs,
+            early_stopping=True,
+            batch_size=batch_size,
+            **kwargs
+        )
+        save and self._save_model(update_id)
         self._query_dataset.latent = self._update_query_models[update_id] \
             .get_latent_representation()
