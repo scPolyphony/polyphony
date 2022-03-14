@@ -103,7 +103,7 @@ class ActiveSCVI(SCVI):
         assign_mask = np.zeros(query_dataset.anchor_mat.shape)
         for anchor in query_dataset.anchor['confirmed']:
             cells = [info['cell_id'] for info in anchor['cells']]
-            cell_loc = query_dataset.obs.index.get_loc(cells)
+            cell_loc = query_dataset.obs.index.get_indexer_for(cells)
             assign_mask[cell_loc, anchor['anchor_ref_id']] = 1
         anchor_mat = assign_mask * query_dataset.anchor_mat
         query_dataset.obs[UPDATE_KEY] = anchor_mat.sum(axis=1) > 1e-3
