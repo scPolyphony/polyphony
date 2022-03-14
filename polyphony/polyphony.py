@@ -9,7 +9,7 @@ from polyphony.anchor_recom import SymphonyAnchorRecommender
 from polyphony.dataset import QueryDataset, ReferenceDataset
 from polyphony.models import ActiveSCVI
 from polyphony.utils.dir import DATA_DIR
-from polyphony.utils.gene import rank_genes_groups
+from polyphony.utils.gene import rank_genes_groups, get_differential_genes_by_cell_ids
 
 
 class Polyphony:
@@ -36,6 +36,7 @@ class Polyphony:
 
         self._anchor_recom = recommender_cls(self._ref_dataset, self._query_dataset)
         self._update_id = 0
+        self._user_selection_uid = 0
 
         self._working_dir = os.path.join(DATA_DIR, problem_id)
         self._ref_model_path = os.path.join(self._working_dir, 'model', 'ref_model')
@@ -70,23 +71,36 @@ class Polyphony:
     def anchor_recom_step(self, **kwargs):
         self._anchor_recom.recommend_anchors(**kwargs)
 
-    def _update_anchor(self, anchor_ids):
-        pass
-
     def refine_anchor(self, anchor):
-        raise NotImplementedError
+        pos = self._find_anchor_by_id(self.query.anchor['unjustified'], anchor['id'])
+        anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=False)
+        anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(
+            self.query.adata, [c['cell_id'] for c in anchor['cells']])
+        self.query.anchor['unjustified'][pos] = anchor
 
     def label_anchor(self, anchor_id, label):
         raise NotImplementedError
 
     def register_anchor(self, anchor):
-        raise NotImplementedError
+        anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=True)
+        anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(self.query.adata,
+            [c['cell_id'] for c in anchor['cells']])
+        self.query.anchor['user_selection'].append(anchor)
 
     def delete_anchor(self, anchor_id):
-        raise NotImplementedError
+        for group in ['unjustified', 'confirmed', 'user_selection']:
+            if anchor_id in [anchor['id'] for anchor in self.query.anchor[group]]:
+                pos = self._find_anchor_by_id(self.query.anchor[group], anchor_id)
+                self.query.anchor[group].pop(pos)
 
     def confirm_anchor(self, anchor_id):
-        raise NotImplementedError
+        pos = self._find_anchor_by_id(self.query.anchor['unjustified'], anchor_id)
+        anchor = self.query.anchor['unjustified'].pop(pos)
+        self.query.anchor['confirmed'] = [anchor] + self.query.anchor['confirmed']
+
+    def _find_anchor_by_id(self, anchors, anchor_id):
+        pos = next(i for i, anchor in enumerate(anchors) if anchor[id] == anchor_id)
+        return pos
 
     def _label_step(self, labels, retrain=True):
         self.query.label = labels
