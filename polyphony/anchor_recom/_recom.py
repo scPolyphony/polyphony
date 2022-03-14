@@ -85,6 +85,7 @@ class AnchorRecommender(ABC):
                                for c, d in zip(cells, anchor_dist)]
             anchor['anchor_dist_median'] = np.median(anchor_dist)
             # TODO: update top_gene_similarity
+        return anchors
 
     def build_or_update_anchor(self, update_unjustified=True, update_confirmed=True,
                                update_user_selection=True):

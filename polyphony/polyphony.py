@@ -73,7 +73,7 @@ class Polyphony:
 
     def refine_anchor(self, anchor):
         pos = self._find_anchor_by_id(self.query.anchor['unjustified'], anchor['id'])
-        anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=False)
+        anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=False)[0]
         anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(
             self.query.adata, [c['cell_id'] for c in anchor['cells']])
         self.query.anchor['unjustified'][pos] = anchor
@@ -82,7 +82,7 @@ class Polyphony:
         raise NotImplementedError
 
     def register_anchor(self, anchor):
-        anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=True)
+        anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=True)[0]
         anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(self.query.adata,
             [c['cell_id'] for c in anchor['cells']])
         self.query.anchor['user_selection'].append(anchor)
@@ -99,7 +99,7 @@ class Polyphony:
         self.query.anchor['confirmed'] = [anchor] + self.query.anchor['confirmed']
 
     def _find_anchor_by_id(self, anchors, anchor_id):
-        pos = next(i for i, anchor in enumerate(anchors) if anchor[id] == anchor_id)
+        pos = next(i for i, anchor in enumerate(anchors) if anchor['id'] == anchor_id)
         return pos
 
     def _label_step(self, labels, retrain=True):
