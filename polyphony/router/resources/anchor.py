@@ -8,9 +8,9 @@ class AnchorResource(Resource):
 
     def __init__(self):
         self.parser = reqparse.RequestParser()
-        self.parser.add_argument('anchor')
-        self.parser.add_argument('anchor_id')
-        self.parser.add_argument('operation')
+        self.parser.add_argument('anchor', location='json')
+        self.parser.add_argument('anchor_id', location='json')
+        self.parser.add_argument('operation', location='json')
         self.pm: PolyphonyManager = current_app.pm
 
     def get(self):
