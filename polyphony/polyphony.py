@@ -82,6 +82,7 @@ class Polyphony:
         raise NotImplementedError
 
     def register_anchor(self, anchor):
+        print(type(anchor['cells']))
         anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=True)[0]
         anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(self.query.adata,
             [c['cell_id'] for c in anchor['cells']])
