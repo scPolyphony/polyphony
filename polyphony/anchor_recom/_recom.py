@@ -72,7 +72,7 @@ class AnchorRecommender(ABC):
             ))
         return anchors
 
-    def update_anchors(self, anchors, reassign_ref=True):
+    def update_anchors(self, anchors, reassign_ref=True, anchor_ref_id=None):
         assign_conf = self._query.anchor_mat
         for i, anchor in enumerate(anchors):
             cells = [info['cell_id'] for info in anchor['cells']]
@@ -80,6 +80,8 @@ class AnchorRecommender(ABC):
             # update reference set
             if reassign_ref:
                 anchor['anchor_ref_id'] = int(assign_conf[cell_loc].sum(axis=0).argmax())
+            else:
+                anchor['anchor_ref_id'] = anchor_ref_id
             anchor_dist = assign_conf[cell_loc, anchor['anchor_ref_id']]
             anchor['cells'] = [{'cell_id': c, 'anchor_dist': float(d)}
                                for c, d in zip(cells, anchor_dist)]
