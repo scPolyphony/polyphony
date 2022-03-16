@@ -43,7 +43,6 @@ class PolyphonyManager:
         anchor = param.get('anchor', None)
         anchor_id = param.get('anchor_id', None)
         operation = param.get('operation', None)  # be either 'add', 'refine', and 'confirm'
-        print(type(anchor))
         if operation == 'add':
             self._pp.register_anchor(anchor)
         elif operation == 'refine':
