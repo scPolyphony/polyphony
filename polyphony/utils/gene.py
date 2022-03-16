@@ -16,8 +16,21 @@ def rank_genes_groups(
     sc.tl.rank_genes_groups(adata, group_key, groups=valid_cluster, method=method)
     adata.uns['rank_genes_groups']['_scores'] = np.array([
         np.array(list(gene_score)) for gene_score in adata.uns['rank_genes_groups']['scores']]).T
-    adata.uns['rank_genes_groups']['_names'] = np.array([
+    
+    rank_genes_groups_names = np.array([
         np.array(list(gene_names)) for gene_names in adata.uns['rank_genes_groups']['names']]).T
+
+    adata.uns['rank_genes_groups']['_names'] = rank_genes_groups_names
+    
+    rank_genes_groups_names_indices = np.zeros(rank_genes_groups_names.shape, dtype=np.dtype('uint16'))
+
+    var_index = adata.var.index.values.tolist()
+
+    for i in range(rank_genes_groups_names.shape[0]):
+        for j in range(rank_genes_groups_names.shape[1]):
+            rank_genes_groups_names_indices[i, j] = var_index.index(rank_genes_groups_names[i, j])
+
+    adata.uns['rank_genes_groups']['_names_indices'] = rank_genes_groups_names_indices
 
 
 def get_differential_genes(
