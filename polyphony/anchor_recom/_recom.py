@@ -80,7 +80,7 @@ class AnchorRecommender(ABC):
             # update reference set
             if reassign_ref:
                 anchor['anchor_ref_id'] = int(assign_conf[cell_loc].sum(axis=0).argmax())
-            else:
+            elif 'anchor_ref_id' not in anchor and anchor_ref_id is not None:
                 anchor['anchor_ref_id'] = anchor_ref_id
             anchor_dist = assign_conf[cell_loc, anchor['anchor_ref_id']]
             anchor['cells'] = [{'cell_id': c, 'anchor_dist': float(d)}
