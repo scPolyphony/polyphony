@@ -3,6 +3,7 @@ import copy
 import os
 
 import numpy as np
+import scanpy as sc
 from sklearn.neighbors import KNeighborsClassifier
 
 from polyphony.anchor_recom import SymphonyAnchorRecommender
@@ -114,8 +115,15 @@ class Polyphony:
         self._fit_classifier()
 
     def umap_transform(self, udpate_reference=True, update_query=True):
-        udpate_reference and self.ref.umap_transform(dir_name=self._umap_model_path)
-        update_query and self.query.umap_transform(model=self.ref.embedder)
+        # udpate_reference and self.ref.umap_transform(dir_name=self._umap_model_path)
+        # update_query and self.query.umap_transform(model=self.ref.embedder)
+        full_adata = self.full_adata
+        sc.pp.neighbors(full_adata, use_rep='latent')
+        sc.tl.umap(full_adata)
+        umap = full_adata.obsm['X_umap']
+        n_ref = self.ref.obs.shape[0]
+        self.ref.adata.obsm['X_umap'] = umap[:n_ref]
+        self.query.adata.obsm['X_umap'] = umap[n_ref:]
 
     def update_differential_genes(self, **kwargs):
         rank_genes_groups(self.ref.adata, **kwargs)
