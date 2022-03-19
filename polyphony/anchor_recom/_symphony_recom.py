@@ -6,6 +6,7 @@ from harmonypy import run_harmony
 
 from polyphony.anchor_recom import AnchorRecommender
 from polyphony.dataset import QueryDataset, ReferenceDataset
+from polyphony.utils.math import largest_proportion
 
 
 class SymphonyAnchorRecommender(AnchorRecommender):
@@ -43,11 +44,16 @@ class SymphonyAnchorRecommender(AnchorRecommender):
             )
             self._reference_cluster_centers = hm.Y
             self._ref.anchor_mat = hm.R.T
+            self._ref.latent = hm.result().T
+            self._ref.anchor_cluster = hm.R.argmax(axis=0).T
+
             self._compression_terms = dict(N=hm.R.sum(axis=1), C=np.dot(hm.R, self._ref.latent))
 
         q_latent = self._query.latent.T
         normed_q_latent = q_latent / np.linalg.norm(q_latent, ord=2, axis=0)
-        dist_mat = 2 * (1 - np.dot(self._reference_cluster_centers.T, normed_q_latent))
+        normed_center = self._reference_cluster_centers / \
+                        np.linalg.norm(self._reference_cluster_centers, ord=2, axis=0)
+        dist_mat = 2 * (1 - np.dot(normed_center.T, normed_q_latent))
         R = -dist_mat
         R = R / self._sigma[:, None]
         R = np.exp(R)
