@@ -31,6 +31,7 @@ def rank_genes_groups(
             rank_genes_groups_names_indices[i, j] = var_index.index(rank_genes_groups_names[i, j])
 
     adata.uns['rank_genes_groups']['_names_indices'] = rank_genes_groups_names_indices
+    adata.uns['rank_genes_groups']['_valid_cluster'] = np.array(valid_cluster, dtype=np.dtype("|O"))
 
 
 def get_differential_genes(
