@@ -34,6 +34,8 @@ class PolyphonyManager:
 
     def update_round(self, save=True):
         self._pp.model_update_step()
+        self._pp.anchor_recom_step()
+        self._pp.umap_transform()
         save and self.save_ann()
 
     def get_anchor(self):
