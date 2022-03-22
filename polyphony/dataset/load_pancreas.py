@@ -22,6 +22,7 @@ def load_pancreas(target_conditions=None):
         gdown.download(url, output, quiet=False)
     full_adata = sc.read(data_output)
     adata = full_adata.raw.to_adata()
+    sc.pp.log1p(adata)
 
     adata = remove_sparsity(adata)
 

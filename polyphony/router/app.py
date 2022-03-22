@@ -7,7 +7,7 @@ from polyphony.router.utils import NpEncoder, SERVER_STATIC_DIR
 
 
 def create_app(problem_id, load_exist=True):
-    pm = PolyphonyManager(problem_id, SERVER_STATIC_DIR)
+    pm = PolyphonyManager(problem_id, static_folder=SERVER_STATIC_DIR)
     pm.init_round(load_exist=load_exist)
 
     app = Flask(

@@ -8,13 +8,19 @@ from polyphony.router.utils import create_project_folders, SERVER_STATIC_DIR
 
 
 class PolyphonyManager:
-    def __init__(self, problem_id, static_folder=SERVER_STATIC_DIR):
+    def __init__(self, problem_id, load_iter=None, static_folder=SERVER_STATIC_DIR):
         self._problem_id = problem_id
         if problem_id == 'pancreas_easy':
-            self._ref_dataset, self._query_dataset = load_pancreas()
+            if load_iter is None:
+                self._ref_dataset, self._query_dataset = load_pancreas()
+            else:
+                pass
         elif problem_id == 'pancreas_hard':
-            self._ref_dataset, self._query_dataset = load_pancreas(
-                target_conditions=['Pancreas inDrop'])
+            if load_iter is None:
+                self._ref_dataset, self._query_dataset = load_pancreas(
+                    target_conditions=['Pancreas inDrop'])
+            else:
+                pass
         else:
             raise NotImplemented
 
@@ -30,12 +36,14 @@ class PolyphonyManager:
         self._pp.init_reference_step(load_exist=load_exist)
         self._pp.anchor_recom_step()
         self._pp.umap_transform()
+        save and self._pp.save_data()
         save and self.save_ann()
 
     def update_round(self, save=True):
         self._pp.model_update_step()
         self._pp.anchor_recom_step()
         self._pp.umap_transform()
+        save and self._pp.save_data()
         save and self.save_ann()
 
     def get_anchor(self):

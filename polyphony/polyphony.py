@@ -1,7 +1,9 @@
 """Main module."""
 import copy
 import os
+from typing import Optional
 
+import anndata
 import numpy as np
 import scanpy as sc
 from sklearn.neighbors import KNeighborsClassifier
@@ -19,6 +21,7 @@ class Polyphony:
         ref_dataset: ReferenceDataset,
         query_dataset: QueryDataset,
         problem_id: str,
+        iter_id: Optional[int] = None,
 
         model_cls=ActiveSCVI,
         recommender_cls=SymphonyAnchorRecommender,
@@ -36,8 +39,7 @@ class Polyphony:
         self._classifier = classifier_cls()
 
         self._anchor_recom = recommender_cls(self._ref_dataset, self._query_dataset)
-        self._update_id = 0
-        self._user_selection_uid = 0
+        self._update_id = 0 if iter_id is None else iter_id
 
         self._working_dir = os.path.join(DATA_DIR, problem_id)
         self._ref_model_path = os.path.join(self._working_dir, 'model', 'ref_model')
@@ -72,6 +74,12 @@ class Polyphony:
     def anchor_recom_step(self, **kwargs):
         self._anchor_recom.recommend_anchors(**kwargs)
 
+    def model_update_step(self, max_epochs=100, batch_size=256, **kwargs):
+        self._model_cls.setup_anchor_rep(self.query, self._anchor_recom.compression_terms)
+        self._update_id += 1
+        self._build_anchored_latent(max_epochs=max_epochs, batch_size=batch_size, **kwargs)
+        self._fit_classifier()
+
     def refine_anchor(self, anchor):
         pos = self._find_anchor_by_id(self.query.anchor['unjustified'], anchor['id'])
         anchor_ref_id = self.query.anchor['unjustified'][pos]['anchor_ref_id']
@@ -87,7 +95,8 @@ class Polyphony:
     def register_anchor(self, anchor):
         anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=True)[0]
         anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(self.query.adata,
-            [c['cell_id'] for c in anchor['cells']])
+                                                                         [c['cell_id'] for c in
+                                                                          anchor['cells']])
         self.query.anchor['user_selection'].append(anchor)
 
     def delete_anchor(self, anchor_id):
@@ -100,22 +109,13 @@ class Polyphony:
         pos = self._find_anchor_by_id(self.query.anchor['unjustified'], anchor_id)
         anchor = self.query.anchor['unjustified'].pop(pos)
         query_cell_ids = [cell['cell_id'] for cell in anchor['cells']]
-        self.query.label.loc[query_cell_ids] = self.query.prediction.loc[query_cell_ids]
+        self.query.label.loc[query_cell_ids] = self.query.prediction.loc[query_cell_ids] \
+            .cat.set_categories(self.query.label.cat.categories)
         self.query.anchor['confirmed'] = [anchor] + self.query.anchor['confirmed']
 
     def _find_anchor_by_id(self, anchors, anchor_id):
         pos = next(i for i, anchor in enumerate(anchors) if anchor['id'] == anchor_id)
         return pos
-
-    def _label_step(self, labels, retrain=True):
-        self.query.label = labels
-        retrain and self._fit_classifier()
-
-    def model_update_step(self, max_epochs=100, batch_size=256, **kwargs):
-        self._model_cls.setup_anchor_rep(self.query, self._anchor_recom.compression_terms)
-        self._update_id += 1
-        self._build_anchored_latent(max_epochs=max_epochs, batch_size=batch_size, **kwargs)
-        self._fit_classifier()
 
     def umap_transform(self, udpate_reference=True, update_query=True):
         # udpate_reference and self.ref.umap_transform(dir_name=self._umap_model_path)
@@ -130,7 +130,7 @@ class Polyphony:
 
     def update_differential_genes(self, **kwargs):
         rank_genes_groups(self.ref.adata, **kwargs)
-        rank_genes_groups(self.query.adata, **kwargs)
+        # rank_genes_groups(self.query.adata, **kwargs)
 
     def _fit_classifier(self):
         labeled_index = self.query.obs[self.query.label != 'none'].index
@@ -140,6 +140,22 @@ class Polyphony:
         y = self.ref.cell_type
         self._classifier.fit(X, y)
         self.query.prediction = self._classifier.predict(self.query.latent)
+
+    def save_data(self, save_ref=True, save_query=True):
+        data_dir = os.path.join(self._working_dir, 'data')
+        if save_ref:
+            self.ref.adata.write(os.path.join(data_dir, 'reference.h5ad'))
+        if save_query:
+            self.query.adata.write(os.path.join(data_dir, 'query.h5ad' if self._update_id == 0
+                else 'query_iter-{}.h5ad'.format(self._update_id)))
+
+    @staticmethod
+    def load_data(problem_id, update_id=0):
+        data_dir = os.path.join(DATA_DIR, problem_id, 'data')
+        ref_adata = anndata.read_h5ad(os.path.join(data_dir, 'reference.h5ad'))
+        query_name = 'query.h5ad' if update_id == 0 else 'query_iter-{}.h5ad'.format(update_id)
+        query_adata = anndata.read_h5ad(os.path.join(data_dir, query_name))
+        return ReferenceDataset(ref_adata), QueryDataset(query_adata)
 
     def _save_model(self, model_token):
         if model_token == 'ref':
@@ -195,6 +211,22 @@ class Polyphony:
             self._query_model.train(**train_kwargs)
             save and self._save_model('query')
 
+    def _update_query_model(self, load_exist=True, save=True,
+                            max_epochs=100, batch_size=512, **train_kwargs):
+        update_id = "query_iter-{}".format(self._update_id)
+        model_path = os.path.join(self._working_dir, update_id)
+        if load_exist and os.path.exists(model_path):
+            self._load_model(update_id)
+        else:
+            self._update_query_models[update_id] = copy.deepcopy(self._query_model)
+            self._update_query_models[update_id].train(
+                max_epochs=max_epochs,
+                early_stopping=True,
+                batch_size=batch_size,
+                **train_kwargs
+            )
+            save and self._save_model(update_id)
+
     def _build_reference_latent(self, **kwargs):
         self._build_ref_model(**kwargs)
         self._ref_dataset.latent = self._ref_model.get_latent_representation()
@@ -203,15 +235,8 @@ class Polyphony:
         self._build_query_model(**kwargs)
         self._query_dataset.latent = self._query_model.get_latent_representation()
 
-    def _build_anchored_latent(self, max_epochs=100, batch_size=512, save=True, **kwargs):
+    def _build_anchored_latent(self, update=True, **kwargs):
         update_id = "query_iter-{}".format(self._update_id)
-        self._update_query_models[update_id] = copy.deepcopy(self._query_model)
-        self._update_query_models[update_id].train(
-            max_epochs=max_epochs,
-            early_stopping=True,
-            batch_size=batch_size,
-            **kwargs
-        )
-        save and self._save_model(update_id)
+        update and self._update_query_model(**kwargs)
         self._query_dataset.latent = self._update_query_models[update_id] \
             .get_latent_representation()
