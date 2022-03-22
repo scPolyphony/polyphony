@@ -4,6 +4,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import math
 
 from polyphony.dataset import QueryDataset, ReferenceDataset
 from polyphony.utils.gene import rank_genes_groups, get_differential_genes
@@ -83,7 +84,7 @@ class AnchorRecommender(ABC):
             anchors.append(dict(
                 id="cluster-{}-{}".format(self._anchor_iter, anchor_idx),
                 anchor_ref_id=anchor_ref_index,
-                cells=[{'cell_id': c, 'anchor_dist': d} for c, d in
+                cells=[{'cell_id': c, 'anchor_dist': float(d) if not math.isnan(float(d)) else 1.0} for c, d in
                        zip(valid_cell_index, anchor_dist)],
                 top_gene_similarity=1,  # TODO: replace it with the true similarity
                 anchor_dist_median=np.median(anchor_dist),
@@ -109,9 +110,10 @@ class AnchorRecommender(ABC):
             elif 'anchor_ref_id' not in anchor and anchor_ref_id is not None:
                 anchor['anchor_ref_id'] = anchor_ref_id
             anchor_dist = assign_conf[cell_loc, anchor['anchor_ref_id']]
-            anchor['cells'] = [{'cell_id': c, 'anchor_dist': float(d)}
+            anchor['cells'] = [{ 'cell_id': c, 'anchor_dist': float(d) if not math.isnan(float(d)) else 1.0 }
                                for c, d in zip(cells, anchor_dist)]
-            anchor['anchor_dist_median'] = float(np.median(anchor_dist))
+            anchor_dist_median = float(np.median(anchor_dist))
+            anchor['anchor_dist_median'] = anchor_dist_median if not math.isnan(anchor_dist_median) else 1.0
             # TODO: update top_gene_similarity
         return anchors
 
