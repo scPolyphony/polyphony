@@ -75,7 +75,8 @@ class Polyphony:
     def refine_anchor(self, anchor):
         pos = self._find_anchor_by_id(self.query.anchor['unjustified'], anchor['id'])
         anchor_ref_id = self.query.anchor['unjustified'][pos]['anchor_ref_id']
-        anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=False, anchor_ref_id=anchor_ref_id)[0]
+        anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=False,
+                                                   anchor_ref_id=anchor_ref_id)[0]
         anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(
             self.query.adata, [c['cell_id'] for c in anchor['cells']])
         self.query.anchor['unjustified'][pos] = anchor
@@ -98,6 +99,8 @@ class Polyphony:
     def confirm_anchor(self, anchor_id):
         pos = self._find_anchor_by_id(self.query.anchor['unjustified'], anchor_id)
         anchor = self.query.anchor['unjustified'].pop(pos)
+        query_cell_ids = [cell['cell_id'] for cell in anchor['cells']]
+        self.query.label.loc[query_cell_ids] = self.query.prediction.loc[query_cell_ids]
         self.query.anchor['confirmed'] = [anchor] + self.query.anchor['confirmed']
 
     def _find_anchor_by_id(self, anchors, anchor_id):
@@ -130,9 +133,11 @@ class Polyphony:
         rank_genes_groups(self.query.adata, **kwargs)
 
     def _fit_classifier(self):
-        labeled_index = self.query.obs[self.query.label == self.query.label].index  # non-NaN
-        X = np.concatenate([self.ref.latent, self.query.latent[labeled_index]])
-        y = np.concatenate([self.ref.cell_type, self.query.label[labeled_index]])
+        labeled_index = self.query.obs[self.query.label != 'none'].index
+        # X = np.concatenate([self.ref.latent, self.query.latent[labeled_index]])
+        # y = np.concatenate([self.ref.cell_type, self.query.label[labeled_index].values])
+        X = self.ref.latent
+        y = self.ref.cell_type
         self._classifier.fit(X, y)
         self.query.prediction = self._classifier.predict(self.query.latent)
 

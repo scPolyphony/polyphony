@@ -25,9 +25,9 @@ class PolyphonyManager:
         self._pp.init_reference_step()
         self._pp.umap_transform()
 
-    def init_round(self, save=True):
+    def init_round(self, load_exist=True, save=True):
         self._pp.setup_data()
-        self._pp.init_reference_step()
+        self._pp.init_reference_step(load_exist=load_exist)
         self._pp.anchor_recom_step()
         self._pp.umap_transform()
         save and self.save_ann()

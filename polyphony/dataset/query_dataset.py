@@ -5,7 +5,10 @@ class QueryDataset(Dataset):
     def __init__(self, adata, **kwargs):
         super(QueryDataset, self).__init__(adata, **kwargs)
         self._adata.obs['source'] = 'query'
-        self._adata.obs['label'] = None
+        self._adata.obs['label'] = 'none'
+        self._adata.obs['label'] = self._adata.obs['label'].astype('category')\
+            .cat.add_categories(self._adata.obs['cell_type'].cat.categories)
+        #  TODO: for testing only, will be removed in the future version.
         self._adata.obs['prediction'] = None
         self._adata.uns['anchor'] = None
 

@@ -15,7 +15,7 @@ class AnchorRecommender(ABC):
         self,
         ref_dataset: ReferenceDataset,
         query_dataset: QueryDataset,
-        min_count: Optional[int] = 20,
+        min_count: Optional[int] = 30,
         min_conf: Optional[float] = 0.5,
         clustering_method: Optional[str] = 'leiden',
     ):
@@ -27,6 +27,7 @@ class AnchorRecommender(ABC):
         self._min_conf = min_conf
 
         self._clustering_method = clustering_method
+        self._anchor_iter = 1
 
     def recommend_anchors(self, *args, **kwargs):
 
@@ -34,6 +35,7 @@ class AnchorRecommender(ABC):
         self._calc_anchor_assign_prob(*args, **kwargs)
         self.build_anchor_ref()
         self.build_or_update_anchor()
+        self._anchor_iter += 1
 
     def build_anchor_ref(self):
         if self._anchor_ref_build_flag is False:
@@ -50,14 +52,19 @@ class AnchorRecommender(ABC):
         assign_conf = pd.DataFrame(self._query.anchor_mat, index=self._query.obs.index)
         anchors = []
 
-        if self._clustering_method == 'leiden':
-            sc.pp.neighbors(self._query.adata, use_rep='latent')
-            sc.tl.leiden(self._query.adata)
-            self._query.anchor_cluster = self._query.obs['leiden']
-        else:
-            self._query.anchor_cluster = assign_conf.argmax(axis=1).astype('str')\
-                .astype('category')
-        self._query.anchor_cluster = self._query.anchor_cluster.cat.add_categories('none')
+        unlabelled = self._query.adata[self._query.label == 'none']
+        _index = unlabelled.obs.index
+        self._query.anchor_cluster = 'none'
+
+        if len(_index) > 0:
+            if self._clustering_method == 'leiden':
+                sc.pp.neighbors(unlabelled, use_rep='latent')
+                sc.tl.leiden(unlabelled)
+                self._query.anchor_cluster.loc[_index] = unlabelled.obs['leiden']
+            else:
+                self._query.anchor_cluster.loc[_index] = assign_conf.loc[_index].argmax(axis=1)
+
+        self._query.anchor_cluster = self._query.anchor_cluster.astype('str').astype('category')
 
         for anchor_idx in self._query.anchor_cluster.cat.categories:
             if anchor_idx == 'none':
@@ -66,7 +73,7 @@ class AnchorRecommender(ABC):
             anchor_ref_index = assign_conf.columns[assign_conf.loc[cell_index].sum(axis=0).argmax()]
             anchor_dist = assign_conf.loc[cell_index, anchor_ref_index]
 
-            # TODO: filter the confident assignment
+            # filter the confident assignment
             valid_cell_index = anchor_dist[anchor_dist > self._min_conf].index
             anchor_dist = assign_conf.loc[valid_cell_index, anchor_ref_index]
 
@@ -74,7 +81,7 @@ class AnchorRecommender(ABC):
                 continue
 
             anchors.append(dict(
-                id="cluster-{}".format(anchor_idx),
+                id="cluster-{}-{}".format(self._anchor_iter, anchor_idx),
                 anchor_ref_id=anchor_ref_index,
                 cells=[{'cell_id': c, 'anchor_dist': d} for c, d in
                        zip(valid_cell_index, anchor_dist)],
@@ -84,7 +91,7 @@ class AnchorRecommender(ABC):
 
         rank_genes_groups(self._query.adata)
         for anchor in anchors:
-            top_genes = get_differential_genes(self._query.adata, anchor['id'].split('-')[1],
+            top_genes = get_differential_genes(self._query.adata, anchor['id'].split('-')[-1],
                                                topk=self._query.adata.X.shape[1],
                                                return_type='matrix')
             anchor['rank_genes_groups'] = top_genes

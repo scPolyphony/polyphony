@@ -15,7 +15,7 @@ class SymphonyAnchorRecommender(AnchorRecommender):
         self,
         ref_dataset: ReferenceDataset,
         query_dataset: QueryDataset,
-        n_cluster: Optional[int] = 100,
+        n_cluster: Optional[int] = 30,
         sigma: Optional[int] = 0.1
     ):
         super(SymphonyAnchorRecommender, self).__init__(ref_dataset, query_dataset)
