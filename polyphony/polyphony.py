@@ -7,8 +7,10 @@ import anndata
 import numpy as np
 import scanpy as sc
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, f1_score
 
 from polyphony.anchor_recom import SymphonyAnchorRecommender
+from polyphony.benchmark import clisi, f1_lisi, ilisi
 from polyphony.dataset import QueryDataset, ReferenceDataset
 from polyphony.models import ActiveSCVI
 from polyphony.utils.dir import DATA_DIR
@@ -132,6 +134,16 @@ class Polyphony:
         rank_genes_groups(self.ref.adata, **kwargs)
         # rank_genes_groups(self.query.adata, **kwargs)
 
+    def evaluate(self):
+        performance = {
+            'ilisi': ilisi([self.ref, self.query]),
+            # 'clisi': clisi([self.ref, self.query]),
+            # 'f1_lisi': f1_lisi([self.ref, self.query]),
+            'accuracy': accuracy_score(self.query.cell_type, self.query.prediction),
+            'f1_score': f1_score(self.query.cell_type, self.query.prediction, average='macro'),
+        }
+        self.query.adata.uns['performance'] = performance
+
     def _fit_classifier(self):
         labeled_index = self.query.obs[self.query.label != 'none'].index
         # X = np.concatenate([self.ref.latent, self.query.latent[labeled_index]])
@@ -140,6 +152,7 @@ class Polyphony:
         y = self.ref.cell_type
         self._classifier.fit(X, y)
         self.query.prediction = self._classifier.predict(self.query.latent)
+        self.query.pred_prob = self._classifier.predict_proba(self.query.latent)
 
     def save_data(self, save_ref=True, save_query=True):
         data_dir = os.path.join(self._working_dir, 'data')
@@ -147,7 +160,7 @@ class Polyphony:
             self.ref.adata.write(os.path.join(data_dir, 'reference.h5ad'))
         if save_query:
             self.query.adata.write(os.path.join(data_dir, 'query.h5ad' if self._update_id == 0
-                else 'query_iter-{}.h5ad'.format(self._update_id)))
+            else 'query_iter-{}.h5ad'.format(self._update_id)))
 
     @staticmethod
     def load_data(problem_id, update_id=0):

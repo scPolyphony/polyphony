@@ -53,7 +53,7 @@ class SymphonyAnchorRecommender(AnchorRecommender):
             self._ref.anchor_cluster = self._ref.anchor_mat.argmax(axis=1)
             anchor_agg = self._ref.obs.groupby('anchor_cluster')['cell_type']\
                 .agg(largest_proportion)
-            self._invalid_ref_idx = sorted([int(i) for i in anchor_agg[anchor_agg < 0.8].index])
+            # self._invalid_ref_idx = sorted([int(i) for i in anchor_agg[anchor_agg < 0.8].index])
 
         q_latent = self._query.latent.T
         normed_q_latent = q_latent / np.linalg.norm(q_latent, ord=2, axis=0)
@@ -63,6 +63,6 @@ class SymphonyAnchorRecommender(AnchorRecommender):
         R = -dist_mat
         R = R / self._sigma[:, None]
         R = np.exp(R)
-        R[:, self._invalid_ref_idx] = 0
+        # R[self._invalid_ref_idx, :] = 0
         R = R / np.sum(R, axis=0)
         self._query.anchor_mat = R.T
