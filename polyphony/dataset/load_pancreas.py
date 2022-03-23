@@ -18,12 +18,12 @@ def load_pancreas(target_conditions=None):
 
     if not os.path.exists(data_output):
         url = 'https://drive.google.com/uc?id=1ehxgfHTsMZXy6YzlFKGJOsBKQ5rrvMnd'
-        output = 'pancreas.h5ad'
-        gdown.download(url, output, quiet=False)
+        gdown.download(url, data_output, quiet=False)
+
     full_adata = sc.read(data_output)
     adata = full_adata.raw.to_adata()
-    sc.pp.log1p(adata)
 
+    sc.pp.log1p(adata)
     adata = remove_sparsity(adata)
 
     source_adata = adata[~adata.obs[condition_key].isin(target_conditions)].copy()
