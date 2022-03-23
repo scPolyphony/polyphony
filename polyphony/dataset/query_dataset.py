@@ -10,6 +10,7 @@ class QueryDataset(Dataset):
             .cat.add_categories(self._adata.obs['cell_type'].cat.categories)
         #  TODO: for testing only, will be removed in the future version.
         self._adata.obs['prediction'] = None
+        self._adata.obs['pred_prob'] = None
         self._adata.uns['anchor'] = None
 
     @property
@@ -31,6 +32,14 @@ class QueryDataset(Dataset):
     @prediction.setter
     def prediction(self, prediction):
         self._adata.obs['prediction'] = prediction
+
+    @property
+    def pred_prob(self):
+        return self._adata.obs['pred_prob']
+
+    @pred_prob.setter
+    def pred_prob(self, pred_prob):
+        self._adata.obs['pred_prob'] = pred_prob
 
     @property
     def anchor(self):

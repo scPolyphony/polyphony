@@ -36,15 +36,19 @@ class PolyphonyManager:
         self._pp.init_reference_step(load_exist=load_exist)
         self._pp.anchor_recom_step()
         self._pp.umap_transform()
+        self._pp.evaluate()
         save and self._pp.save_data()
         save and self.save_ann()
+        print(self._pp.query.adata.uns['performance'])
 
     def update_round(self, save=True):
         self._pp.model_update_step()
         self._pp.anchor_recom_step()
         self._pp.umap_transform()
+        self._pp.evaluate()
         save and self._pp.save_data()
         save and self.save_ann()
+        print(self._pp.query.adata.uns['performance'])
 
     def get_anchor(self):
         return self._pp.query.anchor
