@@ -6,6 +6,7 @@ from typing import Optional
 import anndata
 import numpy as np
 import scanpy as sc
+import torch.cuda
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, f1_score
 
@@ -108,12 +109,14 @@ class Polyphony:
                 self.query.anchor[group].pop(pos)
 
     def confirm_anchor(self, anchor_id):
-        pos = self._find_anchor_by_id(self.query.anchor['unjustified'], anchor_id)
-        anchor = self.query.anchor['unjustified'].pop(pos)
-        query_cell_ids = [cell['cell_id'] for cell in anchor['cells']]
-        self.query.label.loc[query_cell_ids] = self.query.prediction.loc[query_cell_ids] \
-            .cat.set_categories(self.query.label.cat.categories)
-        self.query.anchor['confirmed'] = [anchor] + self.query.anchor['confirmed']
+        for group in ['unjustified', 'user_selection']:
+            if anchor_id in [anchor['id'] for anchor in self.query.anchor[group]]:
+                pos = self._find_anchor_by_id(self.query.anchor[group], anchor_id)
+                anchor = self.query.anchor['unjustified'].pop(pos)
+                query_cell_ids = [cell['cell_id'] for cell in anchor['cells']]
+                self.query.label.loc[query_cell_ids] = self.query.prediction.loc[query_cell_ids] \
+                    .cat.set_categories(self.query.label.cat.categories)
+                self.query.anchor['confirmed'] = [anchor] + self.query.anchor['confirmed']
 
     def _find_anchor_by_id(self, anchors, anchor_id):
         pos = next(i for i, anchor in enumerate(anchors) if anchor['id'] == anchor_id)
@@ -183,17 +186,20 @@ class Polyphony:
         if model_token == 'ref':
             self._ref_model = self._model_cls.load(
                 dir_path=self._ref_model_path,
-                adata=self.ref.adata
+                adata=self.ref.adata,
+                use_gpu=torch.cuda.is_available()
             )
         elif model_token == 'query':
             self._query_model = self._model_cls.load(
                 dir_path=self._query_model_path,
-                adata=self.query.adata
+                adata=self.query.adata,
+                use_gpu=torch.cuda.is_available()
             )
         else:
             self._update_query_models[model_token] = self._model_cls.load(
                 dir_path=os.path.join(self._working_dir, model_token),
-                adata=self.query.adata
+                adata=self.query.adata,
+                use_gpu=torch.cuda.is_available()
             )
 
     def _build_ref_model(self, load_exist=True, save=True, **train_kwargs):
@@ -209,7 +215,7 @@ class Polyphony:
                 use_layer_norm="both",
                 use_batch_norm="none",
             )
-            self._ref_model.train(**train_kwargs)
+            self._ref_model.train(use_gpu=torch.cuda.is_available(), **train_kwargs)
             save and self._save_model('ref')
 
     def _build_query_model(self, load_exist=True, save=True, **train_kwargs):
@@ -221,7 +227,7 @@ class Polyphony:
                 self._ref_model_path,
                 freeze_dropout=True,
             )
-            self._query_model.train(**train_kwargs)
+            self._query_model.train(use_gpu=torch.cuda.is_available(), **train_kwargs)
             save and self._save_model('query')
 
     def _update_query_model(self, load_exist=True, save=True,
@@ -236,6 +242,7 @@ class Polyphony:
                 max_epochs=max_epochs,
                 early_stopping=True,
                 batch_size=batch_size,
+                use_gpu=torch.cuda.is_available(),
                 **train_kwargs
             )
             save and self._save_model(update_id)
