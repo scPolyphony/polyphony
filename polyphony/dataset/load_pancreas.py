@@ -23,8 +23,11 @@ def load_pancreas(target_conditions=None):
     full_adata = sc.read(data_output)
     adata = full_adata.raw.to_adata()
 
-    sc.pp.log1p(adata)
+    sc.pp.filter_cells(adata, min_counts=501)
+    sc.pp.filter_cells(adata, max_counts=79534)
+    sc.pp.filter_cells(adata, min_genes=54)
     adata = remove_sparsity(adata)
+    sc.pp.log1p(adata)
 
     source_adata = adata[~adata.obs[condition_key].isin(target_conditions)].copy()
     target_adata = adata[adata.obs[condition_key].isin(target_conditions)].copy()
