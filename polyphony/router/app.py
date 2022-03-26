@@ -6,9 +6,13 @@ from polyphony.router.polyphony_manager import PolyphonyManager
 from polyphony.router.utils import NpEncoder, SERVER_STATIC_DIR
 
 
-def create_app(problem_id, load_exist=True):
-    pm = PolyphonyManager(problem_id, static_folder=SERVER_STATIC_DIR)
-    pm.init_round(load_exist=load_exist)
+def create_app(args):
+    print(args)
+    pm = PolyphonyManager(args.problem, args.experiment, args.iter, static_folder=SERVER_STATIC_DIR)
+    if args.iter is None:
+        pm.init_round(load_exist=args.load_exist, save=args.save)
+    else:
+        pm.save_ann()
 
     app = Flask(
         __name__,
@@ -19,6 +23,7 @@ def create_app(problem_id, load_exist=True):
 
     app.json_encoder = NpEncoder
     app.pm = pm
+    app.args = args
 
     CORS(app, resources={r"/api/*": {"origins": "*"}, r"/files/*": {"origins": "*"}})
     add_routes(app, SERVER_STATIC_DIR)

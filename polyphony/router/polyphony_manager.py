@@ -3,33 +3,24 @@ import json
 import os
 
 from polyphony import Polyphony
-from polyphony.dataset import load_pancreas
+from polyphony.dataset import load_pancreas, load_pbmc
 from polyphony.router.utils import create_project_folders, SERVER_STATIC_DIR
 
 
 class PolyphonyManager:
-    def __init__(self, problem_id, load_iter=None, static_folder=SERVER_STATIC_DIR):
-        self._problem_id = problem_id
-        if problem_id == 'pancreas_easy':
-            if load_iter is None:
-                self._ref_dataset, self._query_dataset = load_pancreas()
-            else:
-                pass
-        elif problem_id == 'pancreas_hard':
-            if load_iter is None:
-                self._ref_dataset, self._query_dataset = load_pancreas(
-                    target_conditions=['Pancreas inDrop'])
-            else:
-                pass
+    def __init__(self, problem_id, instance_id, load_iter=None, static_folder=SERVER_STATIC_DIR):
+        if load_iter is not None:
+            self._ref_dataset, self._query_dataset = Polyphony.load_data(instance_id, load_iter)
         else:
-            raise NotImplemented
+            if problem_id == 'pancreas':
+                self._ref_dataset, self._query_dataset = load_pancreas()
+            elif problem_id == 'load_pbmc':
+                self._ref_dataset, self._query_dataset = load_pbmc()
+            else:
+                raise NotImplemented
 
-        self._folders = create_project_folders(problem_id, static_folder)
-
-        self._pp = Polyphony(self._ref_dataset, self._query_dataset, problem_id)
-        self._pp.setup_data()
-        self._pp.init_reference_step()
-        self._pp.umap_transform()
+        self._folders = create_project_folders(instance_id, static_folder)
+        self._pp = Polyphony(self._ref_dataset, self._query_dataset, instance_id)
 
     def init_round(self, load_exist=True, save=True):
         self._pp.setup_data()
@@ -37,15 +28,17 @@ class PolyphonyManager:
         self._pp.anchor_recom_step()
         self._pp.umap_transform()
         self._pp.evaluate()
+
         save and self._pp.save_data()
         save and self.save_ann()
         print(self._pp.query.adata.uns['performance'])
 
-    def update_round(self, save=True):
-        self._pp.model_update_step()
+    def update_round(self, load_exist=False, save=True):
+        self._pp.model_update_step(load_exist=load_exist)
         self._pp.anchor_recom_step()
         self._pp.umap_transform()
         self._pp.evaluate()
+
         save and self._pp.save_data()
         save and self.save_ann()
         print(self._pp.query.adata.uns['performance'])

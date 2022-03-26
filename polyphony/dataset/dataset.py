@@ -5,7 +5,7 @@ import os
 import anndata
 
 from scarches.dataset.trvae.data_handling import remove_sparsity
-from umap.parametric_umap import ParametricUMAP, load_ParametricUMAP
+# from umap.parametric_umap import ParametricUMAP, load_ParametricUMAP
 
 from polyphony.utils.dir import SUPPORTED_ANNDATA_FILETYPE
 
@@ -127,8 +127,9 @@ class Dataset:
         return umap_input
 
     def _load_umap_model(self, embedder_path):
-        if os.path.exists(embedder_path):
-            self._embedder = load_ParametricUMAP(embedder_path)
+        # if os.path.exists(embedder_path):
+        #     self._embedder = load_ParametricUMAP(embedder_path)
+        pass
 
     def _save_umap_model(self, embedder_path):
         if self._embedder is not None:
@@ -139,9 +140,10 @@ class Dataset:
         if dir_name and os.path.exists(dir_name):
             self._load_umap_model(dir_name)
         else:
-            self._embedder = ParametricUMAP()
-            self._embedder.fit(self._get_umap_input(adata, source), **train_kwargs)
-            dir_name and self._save_umap_model(dir_name)
+            # self._embedder = ParametricUMAP()
+            # self._embedder.fit(self._get_umap_input(adata, source), **train_kwargs)
+            # dir_name and self._save_umap_model(dir_name)
+            pass
 
     def umap_transform(self, model=None, inplace=True, source='latent', **kwargs):
         dataset = self if inplace else self.copy()

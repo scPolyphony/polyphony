@@ -15,7 +15,7 @@ from polyphony.benchmark import clisi, f1_lisi, ilisi
 from polyphony.dataset import QueryDataset, ReferenceDataset
 from polyphony.models import ActiveSCVI
 from polyphony.utils.dir import DATA_DIR
-from polyphony.utils.gene import rank_genes_groups, get_differential_genes_by_cell_ids
+from polyphony.utils.gene import get_differential_genes_by_cell_ids
 
 
 class Polyphony:
@@ -23,8 +23,12 @@ class Polyphony:
         self,
         ref_dataset: ReferenceDataset,
         query_dataset: QueryDataset,
-        problem_id: str,
+        instance_id: str,
         iter_id: Optional[int] = None,
+
+        ref_model=None,
+        query_model=None,
+        update_query_models=None,
 
         model_cls=ActiveSCVI,
         recommender_cls=SymphonyAnchorRecommender,
@@ -36,22 +40,21 @@ class Polyphony:
 
         self._model_cls = model_cls
 
-        self._ref_model = None
-        self._query_model = None
-        self._update_query_models = dict()
+        self._ref_model = ref_model
+        self._query_model = query_model
+        self._update_query_models = [] if update_query_models is None else update_query_models
         self._classifier = classifier_cls()
 
         self._anchor_recom = recommender_cls(self._ref_dataset, self._query_dataset)
         self._update_id = 0 if iter_id is None else iter_id
 
-        self._working_dir = os.path.join(DATA_DIR, problem_id)
+        self._working_dir = os.path.join(DATA_DIR, instance_id)
         self._ref_model_path = os.path.join(self._working_dir, 'model', 'ref_model')
         self._query_model_path = os.path.join(self._working_dir, 'model', 'surgery_model')
         self._umap_model_path = os.path.join(self._working_dir, 'model', 'umap')
 
-        dirs = [os.path.join(self._working_dir, 'model'), os.path.join(self._working_dir, 'data')]
-        for dir in dirs:
-            os.makedirs(dir, exist_ok=True)
+        os.makedirs(os.path.join(self._working_dir, 'model'), exist_ok=True)
+        os.makedirs(os.path.join(self._working_dir, 'data'), exist_ok=True)
 
     @property
     def ref(self):
@@ -62,12 +65,28 @@ class Polyphony:
         return self._query_dataset
 
     @property
+    def ref_model(self):
+        return self._ref_model
+
+    @ref_model.setter
+    def ref_model(self, ref_model):
+        self._ref_model = ref_model
+
+    @property
+    def query_model(self):
+        return self._query_model
+
+    @query_model.setter
+    def query_model(self, query_model):
+        self._query_model = query_model
+
+    @property
     def full_adata(self):
         return self.ref.adata.concatenate(self.query.adata)
 
     def setup_data(self):
-        self._model_cls.setup_anndata(self.ref.adata, batch_key=self.ref._batch_key)
-        self._model_cls.setup_anndata(self.query.adata, batch_key=self.query._batch_key)
+        self._model_cls.setup_anndata(self.ref.adata, batch_key=self.ref.batch_key)
+        self._model_cls.setup_anndata(self.query.adata, batch_key=self.query.batch_key)
 
     def init_reference_step(self, **kwargs):
         self._build_reference_latent(**kwargs)
@@ -133,10 +152,6 @@ class Polyphony:
         self.ref.adata.obsm['X_umap'] = umap[:n_ref]
         self.query.adata.obsm['X_umap'] = umap[n_ref:]
 
-    def update_differential_genes(self, **kwargs):
-        rank_genes_groups(self.ref.adata, **kwargs)
-        # rank_genes_groups(self.query.adata, **kwargs)
-
     def evaluate(self):
         performance = {
             'ilisi': ilisi([self.ref, self.query]),
@@ -166,10 +181,10 @@ class Polyphony:
             else 'query_iter-{}.h5ad'.format(self._update_id)))
 
     @staticmethod
-    def load_data(problem_id, update_id=0):
-        data_dir = os.path.join(DATA_DIR, problem_id, 'data')
+    def load_data(instance_id, iter=0):
+        data_dir = os.path.join(DATA_DIR, instance_id, 'data')
         ref_adata = anndata.read_h5ad(os.path.join(data_dir, 'reference.h5ad'))
-        query_name = 'query.h5ad' if update_id == 0 else 'query_iter-{}.h5ad'.format(update_id)
+        query_name = 'query.h5ad' if iter == 0 else 'query_iter-{}.h5ad'.format(iter)
         query_adata = anndata.read_h5ad(os.path.join(data_dir, query_name))
         return ReferenceDataset(ref_adata), QueryDataset(query_adata)
 
@@ -182,29 +197,13 @@ class Polyphony:
             self._query_model.save(os.path.join(self._working_dir, 'model', model_token),
                                    overwrite=True)
 
-    def _load_model(self, model_token):
-        if model_token == 'ref':
+    def _build_ref_model(self, load_exist=True, save=True, **train_kwargs):
+        if load_exist and os.path.exists(self._ref_model_path):
             self._ref_model = self._model_cls.load(
                 dir_path=self._ref_model_path,
                 adata=self.ref.adata,
                 use_gpu=torch.cuda.is_available()
             )
-        elif model_token == 'query':
-            self._query_model = self._model_cls.load(
-                dir_path=self._query_model_path,
-                adata=self.query.adata,
-                use_gpu=torch.cuda.is_available()
-            )
-        else:
-            self._update_query_models[model_token] = self._model_cls.load(
-                dir_path=os.path.join(self._working_dir, model_token),
-                adata=self.query.adata,
-                use_gpu=torch.cuda.is_available()
-            )
-
-    def _build_ref_model(self, load_exist=True, save=True, **train_kwargs):
-        if load_exist and os.path.exists(self._ref_model_path):
-            self._load_model('ref')
         else:
             # TODO: move the training parameters to a public function
             self._ref_model = self._model_cls(
@@ -220,25 +219,36 @@ class Polyphony:
 
     def _build_query_model(self, load_exist=True, save=True, **train_kwargs):
         if load_exist and os.path.exists(self._query_model_path):
-            self._load_model('query')
+            self._query_model = self._model_cls.load(
+                dir_path=self._query_model_path,
+                adata=self.query.adata,
+                use_gpu=torch.cuda.is_available()
+            )
         else:
             self._query_model = self._model_cls.load_query_data(
                 self.query.adata,
                 self._ref_model_path,
                 freeze_dropout=True,
             )
-            self._query_model.train(use_gpu=torch.cuda.is_available(), **train_kwargs)
+            self._query_model.train(
+                use_gpu=torch.cuda.is_available(),
+                max_epochs=10,
+                **train_kwargs)
             save and self._save_model('query')
 
-    def _update_query_model(self, load_exist=True, save=True,
+    def _update_query_model(self, load_exist=False, save=True,
                             max_epochs=100, batch_size=512, **train_kwargs):
         update_id = "query_iter-{}".format(self._update_id)
-        model_path = os.path.join(self._working_dir, update_id)
+        model_path = os.path.join(self._working_dir, 'model', update_id)
         if load_exist and os.path.exists(model_path):
-            self._load_model(update_id)
+            self._update_query_models.append(self._model_cls.load(
+                dir_path=os.path.join(self._working_dir, update_id),
+                adata=self.query.adata,
+                use_gpu=torch.cuda.is_available()
+            ))
         else:
-            self._update_query_models[update_id] = copy.deepcopy(self._query_model)
-            self._update_query_models[update_id].train(
+            self._update_query_models.append(copy.deepcopy(self._query_model))
+            self._update_query_models[-1].train(
                 max_epochs=max_epochs,
                 early_stopping=True,
                 batch_size=batch_size,
@@ -256,7 +266,6 @@ class Polyphony:
         self._query_dataset.latent = self._query_model.get_latent_representation()
 
     def _build_anchored_latent(self, update=True, **kwargs):
-        update_id = "query_iter-{}".format(self._update_id)
         update and self._update_query_model(**kwargs)
-        self._query_dataset.latent = self._update_query_models[update_id] \
+        self._query_dataset.latent = self._update_query_models[-1] \
             .get_latent_representation()

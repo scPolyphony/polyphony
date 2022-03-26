@@ -13,15 +13,17 @@ def rank_genes_groups(
 ):
     cls_counts = adata.obs[group_key].value_counts()
     valid_cluster = cls_counts[cls_counts > 1].index.tolist()
-    sc.tl.rank_genes_groups(adata, group_key, groups=valid_cluster, method=method)
+    print(len(adata.var))
+    sc.tl.rank_genes_groups(adata, group_key, groups=valid_cluster, method=method,
+                            n_genes=len(adata.var))
     adata.uns['rank_genes_groups']['_scores'] = np.array([
         np.array(list(gene_score)) for gene_score in adata.uns['rank_genes_groups']['scores']]).T
-    
+
     rank_genes_groups_names = np.array([
         np.array(list(gene_names)) for gene_names in adata.uns['rank_genes_groups']['names']]).T
 
     adata.uns['rank_genes_groups']['_names'] = rank_genes_groups_names
-    
+
     rank_genes_groups_names_indices = np.zeros(rank_genes_groups_names.shape, dtype=np.dtype('uint16'))
 
     var_index = adata.var.index.values.tolist()
@@ -38,7 +40,7 @@ def get_differential_genes(
     adata: AnnData,
     cluster_idx: str,
     group_key: str = 'anchor_cluster',
-    topk: int = 20,
+    topk: int = 100,
     return_type: Union[Literal['dict', 'matrix']] = 'dict'
 ):
     if 'rank_genes_groups' not in adata.uns.keys():

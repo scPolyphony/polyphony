@@ -15,7 +15,7 @@ class SymphonyAnchorRecommender(AnchorRecommender):
         self,
         ref_dataset: ReferenceDataset,
         query_dataset: QueryDataset,
-        n_cluster: Optional[int] = 30,
+        n_cluster: Optional[int] = 100,
         sigma: Optional[int] = 0.1
     ):
         super(SymphonyAnchorRecommender, self).__init__(ref_dataset, query_dataset)
@@ -51,8 +51,8 @@ class SymphonyAnchorRecommender(AnchorRecommender):
             self._compression_terms = dict(N=hm.R.sum(axis=1), C=np.dot(hm.R, self._ref.latent))
 
             self._ref.anchor_cluster = self._ref.anchor_mat.argmax(axis=1)
-            anchor_agg = self._ref.obs.groupby('anchor_cluster')['cell_type']\
-                .agg(largest_proportion)
+            # anchor_agg = self._ref.obs.groupby('anchor_cluster')['cell_type']\
+            #     .agg(largest_proportion)
             # self._invalid_ref_idx = sorted([int(i) for i in anchor_agg[anchor_agg < 0.8].index])
 
         q_latent = self._query.latent.T

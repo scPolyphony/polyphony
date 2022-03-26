@@ -71,11 +71,10 @@ class AnchorRecommender(ABC):
                 continue
             cell_index = self._query.obs[self._query.anchor_cluster == anchor_idx].index
             anchor_ref_index = assign_conf.columns[assign_conf.loc[cell_index].sum(axis=0).argmax()]
-            anchor_dist = assign_conf.loc[cell_index, anchor_ref_index]
+            anchor_conf = assign_conf.loc[cell_index, anchor_ref_index]
 
             # filter the confident assignment
-            valid_cell_index = anchor_dist[anchor_dist > self._min_conf].index
-            anchor_dist = assign_conf.loc[valid_cell_index, anchor_ref_index]
+            valid_cell_index = anchor_conf[anchor_conf > self._min_conf].index
 
             if len(valid_cell_index) < self._min_count:
                 continue
@@ -83,11 +82,12 @@ class AnchorRecommender(ABC):
             anchors.append(dict(
                 id="cluster-{}-{}".format(self._anchor_iter, anchor_idx),
                 anchor_ref_id=anchor_ref_index,
-                cells=[{'cell_id': c, 'anchor_dist': d} for c, d in
-                       zip(valid_cell_index, anchor_dist)],
+                cells=[{'cell_id': c} for c in valid_cell_index],
                 top_gene_similarity=1,  # TODO: replace it with the true similarity
-                anchor_dist_median=np.median(anchor_dist),
             ))
+
+            anchors = self.update_anchors(anchors, reassign_ref=False,
+                                          anchor_ref_id=anchor_ref_index)
 
         rank_genes_groups(self._query.adata)
         for anchor in anchors:
@@ -100,6 +100,9 @@ class AnchorRecommender(ABC):
 
     def update_anchors(self, anchors, reassign_ref=True, anchor_ref_id=None):
         assign_conf = pd.DataFrame(self._query.anchor_mat, index=self._query.obs.index)
+        query_latent = pd.DataFrame(self._query.latent, index=self._query.obs.index)
+        ref_latent = pd.DataFrame(self._ref.latent, index=self._ref.obs.index)
+
         for i, anchor in enumerate(anchors):
             cells = [info['cell_id'] for info in anchor['cells']]
             # update reference set
@@ -107,7 +110,12 @@ class AnchorRecommender(ABC):
                 anchor['anchor_ref_id'] = int(assign_conf.loc[cells].sum(axis=0).argmax())
             elif 'anchor_ref_id' not in anchor and anchor_ref_id is not None:
                 anchor['anchor_ref_id'] = anchor_ref_id
-            anchor_dist = assign_conf.loc[cells, anchor['anchor_ref_id']]
+
+            ref_cell_index = self._ref.anchor_cluster[
+                self._ref.anchor_cluster == str(anchor_ref_id)].index
+            ref_center = ref_latent.loc[ref_cell_index].mean(axis=0)
+            anchor_dist = np.linalg.norm(query_latent.loc[cells] - ref_center, axis=1)
+
             anchor['cells'] = [{'cell_id': c, 'anchor_dist': float(d)}
                                for c, d in zip(cells, anchor_dist)]
             anchor['anchor_dist_median'] = float(np.median(anchor_dist))

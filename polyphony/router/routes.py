@@ -17,5 +17,8 @@ def add_routes(app, static_dir):
 
     @app.route('/api/model_update')
     def model_update():
-        current_app.pm.update_round()
+        # args = current_app.args
+        # load_exist = args.load_exist and args.iter is not None
+        # current_app.pm.update_round(load_exist=load_exist)
+        current_app.pm.update_round(save=current_app.args.save)
         return 'success'
