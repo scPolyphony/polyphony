@@ -1,5 +1,6 @@
 from typing import Optional
 
+import pandas as pd
 import numpy as np
 
 from harmonypy import run_harmony
@@ -50,7 +51,11 @@ class SymphonyAnchorRecommender(AnchorRecommender):
 
             self._compression_terms = dict(N=hm.R.sum(axis=1), C=np.dot(hm.R, self._ref.latent))
 
-            self._ref.anchor_cluster = self._ref.anchor_mat.argmax(axis=1)
+            # anchor_cluster = self._ref.anchor_mat.argmax(axis=1)
+            # anchor_cluster[self._ref.anchor_mat.max(axis=1) < self._min_conf] = -1
+            # valid_index = set(anchor_cluster.tolist())
+            # self._invalid_ref_idx = [i for i in range(self._ref.anchor_mat.shape[1])
+            #                          if i not in valid_index]
             # anchor_agg = self._ref.obs.groupby('anchor_cluster')['cell_type']\
             #     .agg(largest_proportion)
             # self._invalid_ref_idx = sorted([int(i) for i in anchor_agg[anchor_agg < 0.8].index])

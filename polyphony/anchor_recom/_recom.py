@@ -39,9 +39,12 @@ class AnchorRecommender(ABC):
     def build_anchor_ref(self):
         if self._anchor_ref_build_flag is False:
             # assign cluster ids to ref cells
-            self._ref.anchor_cluster = self._ref.anchor_mat.argmax(axis=1)
-            self._ref.anchor_cluster[self._ref.anchor_mat.max(axis=1) < self._min_conf] = 'unsure'
-            self._ref.anchor_cluster = self._ref.anchor_cluster.astype('str').astype('category')
+            anchor_cluster = self._ref.anchor_mat.argmax(axis=1).astype('str')
+            # anchor_cluster[self._ref.anchor_mat.max(axis=1) < self._min_conf] = 'unsure'
+            # anchor_cluster = pd.Series(anchor_cluster, index=self._ref.obs.index).astype(
+            #     'category')
+
+            self._ref.anchor_cluster = anchor_cluster
             # rank genes according to significance
             rank_genes_groups(self._ref.adata)
 

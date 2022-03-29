@@ -14,7 +14,7 @@ class PolyphonyManager:
         else:
             if problem_id == 'pancreas':
                 self._ref_dataset, self._query_dataset = load_pancreas()
-            elif problem_id == 'load_pbmc':
+            elif problem_id == 'pbmc':
                 self._ref_dataset, self._query_dataset = load_pbmc()
             else:
                 raise NotImplemented

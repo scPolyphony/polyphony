@@ -43,7 +43,7 @@ def load_pbmc(target_conditions=None):
         subset=True
     )
 
-    source_adata.X = source_adata.raw[:, source_adata.var_names].X
+    source_adata = source_adata[:, source_adata.var_names]
     target_adata = target_adata[:, source_adata.var_names]
 
     ref_dataset = ReferenceDataset(source_adata, dataset_id='pbmc_ref',
