@@ -104,9 +104,7 @@ class Polyphony:
 
     def refine_anchor(self, anchor):
         pos = self._find_anchor_by_id(self.query.anchor['unjustified'], anchor['id'])
-        anchor_ref_id = self.query.anchor['unjustified'][pos]['anchor_ref_id']
-        anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=False,
-                                                   anchor_ref_id=anchor_ref_id)[0]
+        anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=False)[0]
         anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(
             self.query.adata, [c['cell_id'] for c in anchor['cells']])
         self.query.anchor['unjustified'][pos] = anchor
@@ -116,9 +114,8 @@ class Polyphony:
 
     def register_anchor(self, anchor):
         anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=True)[0]
-        anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(self.query.adata,
-                                                                         [c['cell_id'] for c in
-                                                                          anchor['cells']])
+        anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(
+            self.query.adata, [c['cell_id'] for c in anchor['cells']])
         self.query.anchor['user_selection'].append(anchor)
 
     def delete_anchor(self, anchor_id):

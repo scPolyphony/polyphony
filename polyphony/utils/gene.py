@@ -63,7 +63,7 @@ def get_differential_genes_by_cell_ids(
     adata: AnnData,
     cell_ids: List[str],
     method='wilcoxon',
-    topk: int = 20,
+    topk: int = 100,
     return_type: Union[Literal['dict', 'matrix']] = 'dict'
 ):
     adata = adata.copy()
