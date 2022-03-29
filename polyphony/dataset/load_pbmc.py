@@ -9,7 +9,7 @@ from polyphony.dataset import QueryDataset, ReferenceDataset
 from polyphony.utils.dir import DATA_DIR
 
 
-def load_pbmc(target_conditions=None):
+def load_pbmc(target_conditions=None, remove_cell_type=None):
     condition_key = 'study'
     target_conditions = target_conditions if target_conditions is not None else \
         ["10X"]
@@ -45,6 +45,9 @@ def load_pbmc(target_conditions=None):
 
     source_adata = source_adata[:, source_adata.var_names]
     target_adata = target_adata[:, source_adata.var_names]
+
+    if remove_cell_type is not None:
+        source_adata = source_adata[source_adata.obs['final_annotation'] != remove_cell_type].copy()
 
     ref_dataset = ReferenceDataset(source_adata, dataset_id='pbmc_ref',
                                    cell_type_key='final_annotation', batch_key='batch')

@@ -16,6 +16,9 @@ class PolyphonyManager:
                 self._ref_dataset, self._query_dataset = load_pancreas()
             elif problem_id == 'pbmc':
                 self._ref_dataset, self._query_dataset = load_pbmc()
+            elif problem_id == 'pbmc_exp':
+                self._ref_dataset, self._query_dataset = load_pbmc(
+                    remove_cell_type='Plasmacytoid dendritic cells')
             else:
                 raise NotImplemented
 
