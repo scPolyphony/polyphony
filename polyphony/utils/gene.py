@@ -25,7 +25,7 @@ def rank_genes_groups(
                      for group in adata.uns['rank_genes_groups']['_names']]
 
     adata.uns['rank_genes_groups']['_names_indices'] = names_indices
-    adata.uns['rank_genes_groups']['_valid_cluster'] = np.array(valid_cluster, dtype=np.dtype("|O"))
+    adata.uns['rank_genes_groups']['_valid_cluster'] = valid_cluster
 
 
 def get_differential_genes(
@@ -34,7 +34,7 @@ def get_differential_genes(
     topk: int = 100,
     return_type: Union[Literal['dict', 'matrix']] = 'dict'
 ):
-    valid_cluster = adata.uns['rank_genes_groups']['_valid_cluster'].tolist()
+    valid_cluster = adata.uns['rank_genes_groups']['_valid_cluster']
     if cluster_idx not in valid_cluster:
         return []
     else:

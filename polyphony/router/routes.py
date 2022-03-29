@@ -20,5 +20,5 @@ def add_routes(app, static_dir):
         # args = current_app.args
         # load_exist = args.load_exist and args.iter is not None
         # current_app.pm.update_round(load_exist=load_exist)
-        current_app.pm.update_round(save=current_app.args.save)
+        current_app.pm.update_round(save=current_app.args.save, eval=current_app.args.eval)
         return 'success'

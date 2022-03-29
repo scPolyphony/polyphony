@@ -22,26 +22,26 @@ class PolyphonyManager:
         self._folders = create_project_folders(instance_id, static_folder)
         self._pp = Polyphony(self._ref_dataset, self._query_dataset, instance_id)
 
-    def init_round(self, load_exist=True, save=True):
+    def init_round(self, load_exist=True, save=True, eval=False):
         self._pp.setup_data()
         self._pp.init_reference_step(load_exist=load_exist)
         self._pp.anchor_recom_step()
         self._pp.umap_transform()
-        self._pp.evaluate()
+        eval and self._pp.evaluate()
+        eval and print(self._pp.query.adata.uns['performance'])
 
         save and self._pp.save_data()
         save and self.save_ann()
-        print(self._pp.query.adata.uns['performance'])
 
-    def update_round(self, load_exist=False, save=True):
+    def update_round(self, load_exist=False, save=True, eval=False):
         self._pp.model_update_step(load_exist=load_exist)
         self._pp.anchor_recom_step()
         self._pp.umap_transform()
-        self._pp.evaluate()
+        eval and self._pp.evaluate()
+        eval and print(self._pp.query.adata.uns['performance'])
 
         save and self._pp.save_data()
         save and self.save_ann()
-        print(self._pp.query.adata.uns['performance'])
 
     def get_anchor(self):
         return self._pp.query.anchor

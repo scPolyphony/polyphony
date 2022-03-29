@@ -15,7 +15,7 @@ def create_app(args):
 
     pm = PolyphonyManager(args.problem, args.experiment, args.iter, static_folder=SERVER_STATIC_DIR)
     if args.iter is None:
-        pm.init_round(load_exist=args.load_exist, save=args.save)
+        pm.init_round(load_exist=args.load_exist, save=args.save, eval=args.eval)
     else:
         pm.save_ann()
 
