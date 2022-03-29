@@ -176,20 +176,28 @@ class Polyphony:
             self.ref.adata.write(os.path.join(data_dir, 'reference.h5ad'))
         if save_query:
             query = self.query.copy()
+            query_path_prefix = os.path.join(data_dir, 'query' if self._update_id == 0
+                else 'query_iter-{}'.format(self._update_id))
             if query.anchor is not None:
-                query.anchor = json.dumps(query.anchor)
-            query.adata.write(os.path.join(data_dir, 'query.h5ad' if self._update_id == 0
-                else 'query_iter-{}.h5ad'.format(self._update_id)))
+                query_anchor_str = json.dumps(query.anchor)
+                with open(query_path_prefix + '.json', 'w') as f:
+                    f.write(query_anchor_str)
+                query.anchor = None
+            query.adata.write(query_path_prefix + '.h5ad')
 
     @staticmethod
     def load_data(instance_id, iter=0):
         data_dir = os.path.join(DATA_DIR, instance_id, 'data')
         ref_adata = anndata.read_h5ad(os.path.join(data_dir, 'reference.h5ad'))
-        query_name = 'query.h5ad' if iter == 0 else 'query_iter-{}.h5ad'.format(iter)
-        query_adata = anndata.read_h5ad(os.path.join(data_dir, query_name))
-        if query_adata.uns['anchor'] is not None and type(query_adata.uns['anchor']) == str:
-            query_adata.uns['anchor'] = json.loads(query_adata.uns['anchor'])
-        return ReferenceDataset(ref_adata), QueryDataset(query_adata)
+        query_path_prefix = os.path.join(
+            data_dir, 'query' if iter == 0 else 'query_iter-{}'.format(iter))
+        query_adata = anndata.read_h5ad(query_path_prefix + '.h5ad')
+        ref = ReferenceDataset(ref_adata)
+        query = QueryDataset(query_adata)
+        if os.path.exists(query_path_prefix + '.json'):
+            with open(query_path_prefix + '.json') as f:
+                query.anchor = json.load(f)
+        return ref, query
 
     def _save_model(self, model_token):
         if model_token == 'ref':
