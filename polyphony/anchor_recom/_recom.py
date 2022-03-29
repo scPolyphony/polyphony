@@ -15,7 +15,7 @@ class AnchorRecommender(ABC):
         self,
         ref_dataset: ReferenceDataset,
         query_dataset: QueryDataset,
-        min_count: Optional[int] = 0,
+        min_count: Optional[int] = 1,
         min_conf: Optional[float] = 0.5,
         clustering_method: Optional[str] = 'leiden',
     ):

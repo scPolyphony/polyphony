@@ -28,6 +28,8 @@ def load_pbmc(target_conditions=None, remove_cell_type=None):
     sc.pp.filter_cells(adata, max_counts=79534)
     sc.pp.filter_cells(adata, min_genes=54)
 
+    adata.obs['cell_type'] = adata.obs['final_annotation']
+
     sc.pp.normalize_total(adata)
     sc.pp.log1p(adata)
 
@@ -47,7 +49,7 @@ def load_pbmc(target_conditions=None, remove_cell_type=None):
     target_adata = target_adata[:, source_adata.var_names]
 
     if remove_cell_type is not None:
-        source_adata = source_adata[source_adata.obs['final_annotation'] != remove_cell_type].copy()
+        source_adata = source_adata[source_adata.obs['cell_type'] != remove_cell_type].copy()
 
     ref_dataset = ReferenceDataset(source_adata, dataset_id='pbmc_ref',
                                    cell_type_key='final_annotation', batch_key='batch')

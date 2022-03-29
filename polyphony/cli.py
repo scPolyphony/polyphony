@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--load_exist', action="store_true", help='Load existing results')
     parser.add_argument('--save', action="store_true", help='Save the results in each step')
     parser.add_argument('--eval', action="store_true", help='Whether run the evaluation')
-    parser.add_argument('--iter', action="store_const", const=None,
+    parser.add_argument('--iter', type=int, default=None,
                         help='Load certain step from an existing experiment')
 
     args = parser.parse_args()
