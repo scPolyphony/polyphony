@@ -43,7 +43,6 @@ class AnchorRecommender(ABC):
             # anchor_cluster[self._ref.anchor_mat.max(axis=1) < self._min_conf] = 'unsure'
             # anchor_cluster = pd.Series(anchor_cluster, index=self._ref.obs.index).astype(
             #     'category')
-
             self._ref.anchor_cluster = anchor_cluster
             # rank genes according to significance
             rank_genes_groups(self._ref.adata)
@@ -68,6 +67,7 @@ class AnchorRecommender(ABC):
 
         self._query.anchor_cluster = self._query.anchor_cluster.astype('str').astype('category')
 
+        print("anchor assignment start.")
         for anchor_idx in self._query.anchor_cluster.cat.categories:
             if anchor_idx == 'none':
                 continue
@@ -84,6 +84,7 @@ class AnchorRecommender(ABC):
 
             anchors.append(dict(
                 id="anchor-{}".format(self._anchor_num),
+                local_id=anchor_idx,
                 anchor_ref_id=anchor_ref_index,
                 cells=[{'cell_id': c} for c in valid_cell_index],
                 top_gene_similarity=1,  # TODO: replace it with the true similarity
@@ -91,10 +92,11 @@ class AnchorRecommender(ABC):
 
         anchors = self.update_anchors(anchors, reassign_ref=False)
 
+        print("anchor assignment ends.")
+
         rank_genes_groups(self._query.adata)
         for anchor in anchors:
-            top_genes = get_differential_genes(self._query.adata, anchor['id'].split('-')[-1],
-                                               topk=self._query.adata.X.shape[1],
+            top_genes = get_differential_genes(self._query.adata, anchor['local_id'],
                                                return_type='matrix')
             anchor['rank_genes_groups'] = top_genes
 

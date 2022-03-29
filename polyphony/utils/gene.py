@@ -11,6 +11,7 @@ def rank_genes_groups(
     group_key='anchor_cluster',
     method='wilcoxon',
 ):
+    print("gene ranking starts.")
     cls_counts = adata.obs[group_key].value_counts()
     valid_cluster = cls_counts[cls_counts > 1].index.tolist()
     sc.tl.rank_genes_groups(adata, group_key, groups=valid_cluster, method=method, use_raw=False)
@@ -24,8 +25,11 @@ def rank_genes_groups(
     names_indices = [[var_index[gene_name] for gene_name in group]
                      for group in adata.uns['rank_genes_groups']['_names']]
 
-    adata.uns['rank_genes_groups']['_names_indices'] = names_indices
-    adata.uns['rank_genes_groups']['_valid_cluster'] = valid_cluster
+    adata.uns['rank_genes_groups']['_names_indices'] = np.array(names_indices,
+                                                                dtype=np.dtype("uint16"))
+    adata.uns['rank_genes_groups']['_valid_cluster'] = np.array(valid_cluster,
+                                                                dtype=np.dtype("|O"))
+    print("gene ranking ends.")
 
 
 def get_differential_genes(
@@ -34,7 +38,7 @@ def get_differential_genes(
     topk: int = 100,
     return_type: Union[Literal['dict', 'matrix']] = 'dict'
 ):
-    valid_cluster = adata.uns['rank_genes_groups']['_valid_cluster']
+    valid_cluster = adata.uns['rank_genes_groups']['_valid_cluster'].tolist()
     if cluster_idx not in valid_cluster:
         return []
     else:
@@ -57,5 +61,5 @@ def get_differential_genes_by_cell_ids(
     adata = adata.copy()
     adata.obs['cls'] = 'default'
     adata.obs['cls'].loc[cell_ids] = 'selected'
-    rank_genes_groups(adata, group_key='cls', method=method, use_raw=False)
-    return get_differential_genes(adata, 'selected', 'cls', topk, return_type)
+    rank_genes_groups(adata, group_key='cls', method=method)
+    return get_differential_genes(adata, 'selected', topk, return_type)
