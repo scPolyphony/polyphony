@@ -13,6 +13,7 @@ def main():
     parser.add_argument('--host', default='127.0.0.1', help='The host to run the server')
     parser.add_argument('--port', default=7777, help='The port to run the server')
     parser.add_argument('--debug', action="store_true", help='Run Flask in debug mode')
+    parser.add_argument('--warnings', action="store_true", help='Log warnings')
 
     parser.add_argument('--problem', default='pancreas', help='The identifier of the problem')
     parser.add_argument('--experiment', default='case-1', help='The identifier of the experiment')

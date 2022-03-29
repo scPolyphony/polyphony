@@ -1,3 +1,5 @@
+import warnings
+
 from flask import Flask
 from flask_cors import CORS
 
@@ -8,6 +10,9 @@ from polyphony.router.utils import NpEncoder, SERVER_STATIC_DIR
 
 def create_app(args):
     print(args)
+    if args.warnings is None or not args.warnings:
+        warnings.filterwarnings("ignore")
+
     pm = PolyphonyManager(args.problem, args.experiment, args.iter, static_folder=SERVER_STATIC_DIR)
     if args.iter is None:
         pm.init_round(load_exist=args.load_exist, save=args.save)
