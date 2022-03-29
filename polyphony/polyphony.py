@@ -211,7 +211,7 @@ class Polyphony:
                 use_layer_norm="both",
                 use_batch_norm="none",
             )
-            self._ref_model.train(use_gpu=torch.cuda.is_available(), **train_kwargs)
+            self._ref_model.train(use_gpu=torch.cuda.is_available(), max_epochs=600, **train_kwargs)
             save and self._save_model('ref')
 
     def _build_query_model(self, load_exist=True, save=True, **train_kwargs):
