@@ -105,6 +105,7 @@ class Polyphony:
 
     def refine_anchor(self, anchor):
         pos = self._find_anchor_by_id(self.query.anchor['unjustified'], anchor['id'])
+        anchor['anchor_ref_id'] = self.query.anchor['unjustified'][pos]['anchor_ref_id']
         anchor = self._anchor_recom.update_anchors([anchor], reassign_ref=False)[0]
         anchor['rank_genes_groups'] = get_differential_genes_by_cell_ids(
             self.query.adata, [c['cell_id'] for c in anchor['cells']])
@@ -129,7 +130,7 @@ class Polyphony:
         for group in ['unjustified', 'user_selection']:
             if anchor_id in [anchor['id'] for anchor in self.query.anchor[group]]:
                 pos = self._find_anchor_by_id(self.query.anchor[group], anchor_id)
-                anchor = self.query.anchor['unjustified'].pop(pos)
+                anchor = self.query.anchor[group].pop(pos)
                 query_cell_ids = [cell['cell_id'] for cell in anchor['cells']]
                 self.query.label.loc[query_cell_ids] = self.query.prediction.loc[query_cell_ids] \
                     .cat.set_categories(self.query.label.cat.categories)
@@ -173,7 +174,9 @@ class Polyphony:
     def save_data(self, save_ref=True, save_query=True):
         data_dir = os.path.join(self._working_dir, 'data')
         if save_ref:
-            self.ref.adata.write(os.path.join(data_dir, 'reference.h5ad'))
+            ref_path_prefix = os.path.join(data_dir, 'ref' if self._update_id == 0
+                else 'ref_iter-{}'.format(self._update_id))
+            self.ref.adata.write(os.path.join(data_dir, ref_path_prefix + '.h5ad'))
         if save_query:
             query = self.query.copy()
             query_path_prefix = os.path.join(data_dir, 'query' if self._update_id == 0
@@ -188,7 +191,9 @@ class Polyphony:
     @staticmethod
     def load_data(instance_id, iter=0):
         data_dir = os.path.join(DATA_DIR, instance_id, 'data')
-        ref_adata = anndata.read_h5ad(os.path.join(data_dir, 'reference.h5ad'))
+        ref_path_prefix = os.path.join(
+            data_dir, 'reference' if iter == 0 else 'reference_iter-{}'.format(iter))
+        ref_adata = anndata.read_h5ad(os.path.join(data_dir, ref_path_prefix + '.h5ad'))
         query_path_prefix = os.path.join(
             data_dir, 'query' if iter == 0 else 'query_iter-{}'.format(iter))
         query_adata = anndata.read_h5ad(query_path_prefix + '.h5ad')

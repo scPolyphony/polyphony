@@ -17,6 +17,8 @@ def create_app(args):
     if args.iter is None:
         pm.init_round(load_exist=args.load_exist, save=args.save, eval=args.eval)
     else:
+        pm._pp._fit_classifier()
+        pm._pp.query.prediction = pm._pp.query.prediction.astype('category')
         pm.save_ann()
 
     app = Flask(

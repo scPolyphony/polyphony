@@ -15,7 +15,7 @@ class AnchorRecommender(ABC):
         self,
         ref_dataset: ReferenceDataset,
         query_dataset: QueryDataset,
-        min_count: Optional[int] = 1,
+        min_count: Optional[int] = 100,
         min_conf: Optional[float] = 0.5,
         clustering_method: Optional[str] = 'leiden',
     ):
@@ -40,9 +40,9 @@ class AnchorRecommender(ABC):
         if self._anchor_ref_build_flag is False:
             # assign cluster ids to ref cells
             anchor_cluster = self._ref.anchor_mat.argmax(axis=1).astype('str')
-            # anchor_cluster[self._ref.anchor_mat.max(axis=1) < self._min_conf] = 'unsure'
-            # anchor_cluster = pd.Series(anchor_cluster, index=self._ref.obs.index).astype(
-            #     'category')
+            anchor_cluster[self._ref.anchor_mat.max(axis=1) < self._min_conf] = 'unsure'
+            anchor_cluster = pd.Series(anchor_cluster, index=self._ref.obs.index).astype(
+                'category')
             self._ref.anchor_cluster = anchor_cluster
             # rank genes according to significance
             rank_genes_groups(self._ref.adata)

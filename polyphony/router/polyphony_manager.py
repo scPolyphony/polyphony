@@ -23,7 +23,7 @@ class PolyphonyManager:
                 raise NotImplemented
 
         self._folders = create_project_folders(instance_id, static_folder)
-        self._pp = Polyphony(self._ref_dataset, self._query_dataset, instance_id)
+        self._pp = Polyphony(self._ref_dataset, self._query_dataset, instance_id, load_iter)
 
     def init_round(self, load_exist=True, save=True, eval=False):
         self._pp.setup_data()
