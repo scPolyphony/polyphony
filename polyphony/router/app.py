@@ -1,14 +1,25 @@
+import warnings
+
 from flask import Flask
 from flask_cors import CORS
 
 from polyphony.router.routes import add_routes
 from polyphony.router.polyphony_manager import PolyphonyManager
-from polyphony.router.utils import SERVER_STATIC_DIR
+from polyphony.router.utils import NpEncoder, SERVER_STATIC_DIR
 
 
-def create_app(problem_id):
-    pm = PolyphonyManager(problem_id, SERVER_STATIC_DIR)
-    pm.init_round()
+def create_app(args):
+    print(args)
+    if args.warnings is None or not args.warnings:
+        warnings.filterwarnings("ignore")
+
+    pm = PolyphonyManager(args.problem, args.experiment, args.iter, static_folder=SERVER_STATIC_DIR)
+    if args.iter is None:
+        pm.init_round(load_exist=args.load_exist, save=args.save, eval=args.eval)
+    else:
+        pm._pp._fit_classifier()
+        pm._pp.query.prediction = pm._pp.query.prediction.astype('category')
+        pm.save_ann()
 
     app = Flask(
         __name__,
@@ -17,7 +28,9 @@ def create_app(problem_id):
         template_folder='../../apidocs'
     )
 
+    app.json_encoder = NpEncoder
     app.pm = pm
+    app.args = args
 
     CORS(app, resources={r"/api/*": {"origins": "*"}, r"/files/*": {"origins": "*"}})
     add_routes(app, SERVER_STATIC_DIR)

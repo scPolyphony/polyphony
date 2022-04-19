@@ -5,9 +5,9 @@ import os
 import anndata
 
 from scarches.dataset.trvae.data_handling import remove_sparsity
-from umap.parametric_umap import ParametricUMAP, load_ParametricUMAP
+# from umap.parametric_umap import ParametricUMAP, load_ParametricUMAP
 
-from polyphony.utils.dir import DATA_DIR, SUPPORTED_ANNDATA_FILETYPE
+from polyphony.utils.dir import SUPPORTED_ANNDATA_FILETYPE
 
 
 class Dataset:
@@ -16,15 +16,24 @@ class Dataset:
         self,
         adata,
         dataset_id='dataset',
+
         batch_key='batch',
+        cell_type_key='cell_type',
         latent_key='latent',
-        working_dir=DATA_DIR
+
+        anchor_mat_key='anchor_mat',
+        anchor_set_key='anchor_cluster',
+        anchor_dist_key='anchor_dist'
     ):
         self._adata = adata
         self._dataset_id = dataset_id
+
         self._batch_key = batch_key
+        self._cell_type_key = cell_type_key
         self._latent_key = latent_key
-        self._working_dir = working_dir
+        self._anchor_mat_key = anchor_mat_key
+        self._anchor_set_key = anchor_set_key
+        self._anchor_dist_key = anchor_dist_key
 
         self._embedder = None
 
@@ -37,12 +46,64 @@ class Dataset:
         self._adata = adata
 
     @property
-    def working_dir(self):
-        return self._working_dir
+    def obs(self):
+        return self._adata.obs
 
-    @working_dir.setter
-    def working_dir(self, working_dir):
-        self._working_dir = working_dir
+    @property
+    def obsm(self):
+        return self._adata.obsm
+
+    @property
+    def X(self):
+        return self._adata.X
+
+    @property
+    def latent(self):
+        return self._adata.obsm[self._latent_key]
+
+    @latent.setter
+    def latent(self, latent):
+        self._adata.obsm[self._latent_key] = latent
+
+    @property
+    def batch(self):
+        return self._adata.obs[self._batch_key]
+
+    @property
+    def batch_key(self):
+        return self._batch_key
+
+    @property
+    def cell_type(self):
+        return self._adata.obs[self._cell_type_key]
+
+    @property
+    def anchor_mat(self):
+        return self._adata.obsm[self._anchor_mat_key]
+
+    @anchor_mat.setter
+    def anchor_mat(self, anchor_mat):
+        self._adata.obsm[self._anchor_mat_key] = anchor_mat
+
+    @property
+    def anchor_cluster(self):
+        return self._adata.obs[self._anchor_set_key]
+
+    @anchor_cluster.setter
+    def anchor_cluster(self, anchor_set):
+        self._adata.obs[self._anchor_set_key] = anchor_set
+
+    @property
+    def anchor_dist(self):
+        return self._adata.obs[self._anchor_dist_key]
+
+    @anchor_dist.setter
+    def anchor_dist(self, anchor_dist):
+        self._adata.obs[self._anchor_dist_key] = anchor_dist
+
+    @property
+    def umap(self):
+        return self._adata.obsm['umap']
 
     @property
     def embedder(self):
@@ -66,35 +127,32 @@ class Dataset:
         return umap_input
 
     def _load_umap_model(self, embedder_path):
-        if os.path.exists(embedder_path):
-            self._embedder = load_ParametricUMAP(embedder_path)
+        # if os.path.exists(embedder_path):
+        #     self._embedder = load_ParametricUMAP(embedder_path)
+        pass
 
     def _save_umap_model(self, embedder_path):
         if self._embedder is not None:
             self._embedder.save(embedder_path)
 
-    def build_umap_model(self, adata=None, source='latent', load_exist=True, save=True,
-                         **train_kwargs):
+    def build_umap_model(self, adata=None, source='latent', dir_name=None, **train_kwargs):
         adata = self.adata if adata is None else adata
-        embedder_path = os.path.join(self._working_dir, 'umap')
-        if load_exist and os.path.exists(embedder_path):
-            self._load_umap_model(embedder_path)
+        if dir_name and os.path.exists(dir_name):
+            self._load_umap_model(dir_name)
         else:
-            self._embedder = ParametricUMAP()
-            self._embedder.fit(self._get_umap_input(adata, source), **train_kwargs)
-            save and self._save_umap_model(embedder_path)
+            # self._embedder = ParametricUMAP()
+            # self._embedder.fit(self._get_umap_input(adata, source), **train_kwargs)
+            # dir_name and self._save_umap_model(dir_name)
+            pass
 
-    def umap_transform(self, model=None, source='latent', inplace=True):
+    def umap_transform(self, model=None, inplace=True, source='latent', **kwargs):
         dataset = self if inplace else self.copy()
         if model is None and self.embedder is None:
-            self.build_umap_model(dataset.adata, source=source)
+            self.build_umap_model(dataset.adata, source=source, **kwargs)
         model = self.embedder if model is None else model
 
-        adata = dataset.adata
-        umap_input = self._get_umap_input(adata, source)
-        adata.obsm['X_umap'] = model.transform(umap_input)
-        dataset.adata = adata
-        return dataset
+        umap_input = self._get_umap_input(dataset.adata, source)
+        dataset.adata.obsm['X_umap'] = model.transform(umap_input)
 
     def save_adata(self, path):
         _, file_extension = os.path.splitext(path)
@@ -105,18 +163,16 @@ class Dataset:
         elif file_extension == '.h5ad':
             self.adata.write(path)
 
-    def save(self):
-        self._save_umap_model(os.path.join(self._working_dir, 'umap'))
+    def save(self, dir_name):
+        self._save_umap_model(os.path.join(dir_name, 'umap'))
         # TODO: support more file extension in the future
-        self.save_adata(os.path.join(self._working_dir, self._dataset_id + '.h5ad'))
+        self.save_adata(os.path.join(dir_name, self._dataset_id + '.h5ad'))
         config = dict(
             dataset_id=self._dataset_id,
             batch_key=self._batch_key,
             latent_key=self._latent_key,
-            working_dir=self._working_dir
         )
-        with open(os.path.join(self._working_dir, '{}_config.json'.format(self._dataset_id)),
-                  'w') as f:
+        with open(os.path.join(dir_name, '{}_config.json'.format(self._dataset_id)), 'w') as f:
             json.dump(config, f)
 
     @staticmethod
