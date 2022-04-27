@@ -13,17 +13,17 @@ from sklearn.metrics import accuracy_score, f1_score
 
 from polyphony.anchor_recom import SymphonyAnchorRecommender
 from polyphony.benchmark import clisi, f1_lisi, ilisi
-from polyphony.dataset import QueryDataset, ReferenceDataset
+from polyphony.data import QryAnnDataManager, RefAnnDataManager
 from polyphony.models import ActiveSCVI
-from polyphony.utils.dir import DATA_DIR
+from polyphony.utils._constant import DATA_DIR
 from polyphony.utils.gene import get_differential_genes_by_cell_ids
 
 
 class Polyphony:
     def __init__(
         self,
-        ref_dataset: ReferenceDataset,
-        query_dataset: QueryDataset,
+        ref_dataset: RefAnnDataManager,
+        query_dataset: QryAnnDataManager,
         instance_id: str,
         iter_id: Optional[int] = None,
 

@@ -2,11 +2,10 @@ from typing import Optional
 
 import pandas as pd
 import numpy as np
-
 from harmonypy import run_harmony
 
 from polyphony.anchor_recom import AnchorRecommender
-from polyphony.dataset import QueryDataset, ReferenceDataset
+from polyphony.data import QryAnnDataManager, RefAnnDataManager
 from polyphony.utils.math import largest_proportion
 
 
@@ -14,8 +13,8 @@ class SymphonyAnchorRecommender(AnchorRecommender):
 
     def __init__(
         self,
-        ref_dataset: ReferenceDataset,
-        query_dataset: QueryDataset,
+        ref_dataset: RefAnnDataManager,
+        query_dataset: QryAnnDataManager,
         n_cluster: Optional[int] = 30,
         sigma: Optional[int] = 0.1
     ):

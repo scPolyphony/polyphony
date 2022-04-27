@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 
-from polyphony.dataset import QueryDataset, ReferenceDataset
+from polyphony.data import QryAnnDataManager, RefAnnDataManager
 from polyphony.utils.gene import rank_genes_groups, get_differential_genes
 
 
@@ -13,8 +13,8 @@ class AnchorRecommender(ABC):
 
     def __init__(
         self,
-        ref_dataset: ReferenceDataset,
-        query_dataset: QueryDataset,
+        ref_dataset: RefAnnDataManager,
+        query_dataset: QryAnnDataManager,
         min_count: Optional[int] = 100,
         min_conf: Optional[float] = 0.5,
         clustering_method: Optional[str] = 'leiden',
@@ -67,7 +67,6 @@ class AnchorRecommender(ABC):
 
         self._query.anchor_cluster = self._query.anchor_cluster.astype('str').astype('category')
 
-        print("anchor assignment start.")
         for anchor_idx in self._query.anchor_cluster.cat.categories:
             if anchor_idx == 'none':
                 continue
@@ -91,8 +90,6 @@ class AnchorRecommender(ABC):
             ))
 
         anchors = self.update_anchors(anchors, reassign_ref=False)
-
-        print("anchor assignment ends.")
 
         rank_genes_groups(self._query.adata)
         for anchor in anchors:

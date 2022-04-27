@@ -2,7 +2,6 @@ from typing import List, Union, Literal
 
 import numpy as np
 import scanpy as sc
-
 from anndata import AnnData
 
 
