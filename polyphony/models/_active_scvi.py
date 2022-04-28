@@ -100,7 +100,7 @@ class ActiveSCVI(SCVI):
         lamb: Optional[int] = None
     ):
         assign_mask = np.zeros(query_dataset.anchor_prob.shape)
-        for anchor in query_dataset.anchor_detail['confirmed']:
+        for anchor in query_dataset.anchor['confirmed']:
             cells = [info['cell_id'] for info in anchor['cells']]
             cell_loc = query_dataset.adata.obs.index.get_indexer_for(cells)
             assign_mask[cell_loc, anchor['anchor_ref_id']] = 1

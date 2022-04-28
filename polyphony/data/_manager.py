@@ -18,6 +18,12 @@ class AnnDataManager:
         self._registry = ANNDATA_REGISTER
         if adata_register is not None:
             self._registry.update(adata_register)
+    #     self._register_anndata()
+    #
+    # def _register_anndata(self, copy=False):
+    #     manager = self if copy is False else self.copy()
+    #     if self._registry['anchor_prob_key'] not in manager.adata.varm_keys():
+    #         manager.anchor_prob = None
 
     @property
     def latent(self):
@@ -107,10 +113,14 @@ class QryAnnDataManager(AnnDataManager):
     def _register_anndata(self, copy=False):
         manager = self if copy is False else self.copy()
         manager.adata.obs[self._registry['source_key']] = 'query'
-        manager.label = 'none'
-        manager.pred = None
-        manager.pred_prob = None
-        manager.anchor_detail = None
+        if self._registry['label_key'] not in manager.adata.var_keys():
+            manager.label = 'none'
+        if self._registry['pred_key'] not in manager.adata.var_keys():
+            manager.pred = None
+        if self._registry['pred_prob_key'] not in manager.adata.var_keys():
+            manager.pred_prob = None
+        if self._registry['anchor_detail_key'] not in manager.adata.uns_keys():
+            manager.anchor = None
 
     @property
     def source(self):
@@ -141,9 +151,9 @@ class QryAnnDataManager(AnnDataManager):
         self.adata.obs[self._registry['pred_prob_key']] = pred_prob
 
     @property
-    def anchor_detail(self):
+    def anchor(self):
         return self.adata.uns[self._registry['anchor_detail_key']]
 
-    @anchor_detail.setter
-    def anchor_detail(self, anchor_detail):
-        self.adata.uns[self._registry['anchor_detail_key']] = anchor_detail
+    @anchor.setter
+    def anchor(self, anchor):
+        self.adata.uns[self._registry['anchor_detail_key']] = anchor

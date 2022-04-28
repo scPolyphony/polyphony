@@ -39,39 +39,39 @@ class AnchorRecommender(ABC):
     def build_anchor_ref(self):
         if self._anchor_ref_build_flag is False:
             # assign cluster ids to ref cells
-            anchor_cluster = self._ref.anchor_mat.argmax(axis=1).astype('str')
-            anchor_cluster[self._ref.anchor_mat.max(axis=1) < self._min_conf] = 'unsure'
-            anchor_cluster = pd.Series(anchor_cluster, index=self._ref.obs.index).astype(
+            anchor_assign = self._ref.anchor_prob.argmax(axis=1).astype('str')
+            anchor_assign[self._ref.anchor_prob.max(axis=1) < self._min_conf] = 'unsure'
+            anchor_assign = pd.Series(anchor_assign, index=self._ref.adata.obs.index).astype(
                 'category')
-            self._ref.anchor_cluster = anchor_cluster
+            self._ref.anchor_assign = anchor_assign
             # rank genes according to significance
             rank_genes_groups(self._ref.adata)
 
         _anchor_ref_build_flag = True
 
     def create_anchors(self):
-        assign_conf = pd.DataFrame(self._query.anchor_mat, index=self._query.obs.index)
+        assign_conf = pd.DataFrame(self._query.anchor_prob, index=self._query.adata.obs.index)
         anchors = []
 
         unlabelled = self._query.adata[self._query.label == 'none']
         _index = unlabelled.obs.index
-        self._query.anchor_cluster = 'none'
+        self._query.anchor_assign = 'none'
 
         if len(_index) > 0:
             if self._clustering_method == 'leiden':
                 sc.pp.neighbors(unlabelled, use_rep='latent')
                 sc.tl.leiden(unlabelled)
-                self._query.anchor_cluster.loc[_index] = unlabelled.obs['leiden']
+                self._query.anchor_assign.loc[_index] = unlabelled.obs['leiden']
             else:
-                self._query.anchor_cluster.loc[_index] = assign_conf.loc[_index].argmax(axis=1)
+                self._query.anchor_assign.loc[_index] = assign_conf.loc[_index].argmax(axis=1)
 
-        self._query.anchor_cluster = self._query.anchor_cluster.astype('str').astype('category')
+        self._query.anchor_assign = self._query.anchor_assign.astype('str').astype('category')
 
-        for anchor_idx in self._query.anchor_cluster.cat.categories:
+        for anchor_idx in self._query.anchor_assign.cat.categories:
             if anchor_idx == 'none':
                 continue
             self._anchor_num += 1
-            cell_index = self._query.obs[self._query.anchor_cluster == anchor_idx].index
+            cell_index = self._query.adata.obs[self._query.anchor_assign == anchor_idx].index
             anchor_ref_index = assign_conf.columns[assign_conf.loc[cell_index].sum(axis=0).argmax()]
             anchor_conf = assign_conf.loc[cell_index, anchor_ref_index]
 
@@ -100,9 +100,9 @@ class AnchorRecommender(ABC):
         return anchors
 
     def update_anchors(self, anchors, reassign_ref=True):
-        assign_conf = pd.DataFrame(self._query.anchor_mat, index=self._query.obs.index)
-        query_latent = pd.DataFrame(self._query.latent, index=self._query.obs.index)
-        ref_latent = pd.DataFrame(self._ref.latent, index=self._ref.obs.index)
+        assign_conf = pd.DataFrame(self._query.anchor_assign, index=self._query.adata.obs.index)
+        query_latent = pd.DataFrame(self._query.latent, index=self._query.adata.obs.index)
+        ref_latent = pd.DataFrame(self._ref.latent, index=self._ref.adata.obs.index)
 
         for i, anchor in enumerate(anchors):
             cells = [info['cell_id'] for info in anchor['cells']]
@@ -112,8 +112,8 @@ class AnchorRecommender(ABC):
 
             assert anchor['anchor_ref_id'] is not None
 
-            ref_cell_index = self._ref.anchor_cluster[
-                self._ref.anchor_cluster == str(anchor['anchor_ref_id'])].index
+            ref_cell_index = self._ref.anchor_assign[
+                self._ref.anchor_assign == str(anchor['anchor_ref_id'])].index
             ref_center = ref_latent.loc[ref_cell_index].mean(axis=0)
             anchor_dist = np.linalg.norm(query_latent.loc[cells] - ref_center, axis=1)
 

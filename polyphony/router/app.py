@@ -9,7 +9,6 @@ from polyphony.router.utils import NpEncoder, SERVER_STATIC_DIR
 
 
 def create_app(args):
-    print(args)
     if args.warnings is None or not args.warnings:
         warnings.filterwarnings("ignore")
 
