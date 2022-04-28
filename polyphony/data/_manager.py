@@ -1,6 +1,7 @@
 import copy
 from uuid import uuid4
 
+import pandas as pd
 from anndata import AnnData
 
 from polyphony.utils._constant import ANNDATA_REGISTER, QRY_ANNDATA_REGISTER, REF_ANNDATA_REGISTER
@@ -114,9 +115,10 @@ class QryAnnDataManager(AnnDataManager):
         manager = self if copy is False else self.copy()
         manager.adata.obs[self._registry['source_key']] = 'query'
         if self._registry['label_key'] not in manager.adata.var_keys():
+            manager.label = pd.Series(dtype='object')
             manager.label = 'none'
         if self._registry['pred_key'] not in manager.adata.var_keys():
-            manager.pred = None
+            manager.pred = pd.Series(dtype='object')
         if self._registry['pred_prob_key'] not in manager.adata.var_keys():
             manager.pred_prob = None
         if self._registry['anchor_detail_key'] not in manager.adata.uns_keys():
