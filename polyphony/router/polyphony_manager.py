@@ -3,7 +3,7 @@ import json
 import os
 
 from polyphony import Polyphony
-from polyphony.dataset import load_pancreas, load_pbmc
+from polyphony.data import load_pancreas, load_pbmc
 from polyphony.router.utils import create_project_folders, SERVER_STATIC_DIR
 
 

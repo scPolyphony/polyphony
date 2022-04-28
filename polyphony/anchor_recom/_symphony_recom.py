@@ -2,11 +2,10 @@ from typing import Optional
 
 import pandas as pd
 import numpy as np
-
 from harmonypy import run_harmony
 
 from polyphony.anchor_recom import AnchorRecommender
-from polyphony.dataset import QueryDataset, ReferenceDataset
+from polyphony.data import QryAnnDataManager, RefAnnDataManager
 from polyphony.utils.math import largest_proportion
 
 
@@ -14,8 +13,8 @@ class SymphonyAnchorRecommender(AnchorRecommender):
 
     def __init__(
         self,
-        ref_dataset: ReferenceDataset,
-        query_dataset: QueryDataset,
+        ref_dataset: RefAnnDataManager,
+        query_dataset: QryAnnDataManager,
         n_cluster: Optional[int] = 30,
         sigma: Optional[int] = 0.1
     ):
@@ -39,24 +38,24 @@ class SymphonyAnchorRecommender(AnchorRecommender):
         if self._reference_cluster_centers is None:
             hm = run_harmony(
                 self._ref.latent,
-                self._ref.obs,
+                self._ref.adata.obs,
                 self._ref.batch_key,
                 nclust=self._n_cluster,
                 sigma=self._sigma
             )
             self._reference_cluster_centers = hm.Y
-            self._ref.anchor_mat = hm.R.T
+            self._ref.anchor_prob = hm.R.T
             self._ref.latent = hm.result().T
-            self._ref.anchor_cluster = hm.R.argmax(axis=0).T
+            self._ref.anchor_assign = hm.R.argmax(axis=0).T
 
             self._compression_terms = dict(N=hm.R.sum(axis=1), C=np.dot(hm.R, self._ref.latent))
 
-            # anchor_cluster = self._ref.anchor_mat.argmax(axis=1)
-            # anchor_cluster[self._ref.anchor_mat.max(axis=1) < self._min_conf] = -1
-            # valid_index = set(anchor_cluster.tolist())
+            # anchor_prob = self._ref.anchor_mat.argmax(axis=1)
+            # anchor_prob[self._ref.anchor_mat.max(axis=1) < self._min_conf] = -1
+            # valid_index = set(anchor_prob.tolist())
             # self._invalid_ref_idx = [i for i in range(self._ref.anchor_mat.shape[1])
             #                          if i not in valid_index]
-            # anchor_agg = self._ref.obs.groupby('anchor_cluster')['cell_type']\
+            # anchor_agg = self._ref.obs.groupby('anchor_prob')['cell_type']\
             #     .agg(largest_proportion)
             # self._invalid_ref_idx = sorted([int(i) for i in anchor_agg[anchor_agg < 0.8].index])
 
@@ -70,4 +69,4 @@ class SymphonyAnchorRecommender(AnchorRecommender):
         R = np.exp(R)
         # R[self._invalid_ref_idx, :] = 0
         R = R / np.sum(R, axis=0)
-        self._query.anchor_mat = R.T
+        self._query.anchor_prob = R.T
