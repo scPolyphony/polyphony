@@ -5,9 +5,7 @@ import gdown
 from scarches.dataset.trvae.data_handling import remove_sparsity
 
 from polyphony.data import QryAnnDataManager, RefAnnDataManager
-
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-DATA_DIR = os.path.join(ROOT_DIR, 'data')
+from polyphony.utils._constant import DATA_DIR
 
 
 def load_pancreas(target_conditions=None, data_folder=DATA_DIR):
