@@ -4,7 +4,7 @@ from uuid import uuid4
 import pandas as pd
 from anndata import AnnData
 
-from polyphony.utils._constant import ANNDATA_REGISTER, QRY_ANNDATA_REGISTER, REF_ANNDATA_REGISTER
+from polyphony.utils._constant import ANNDATA_REGISTER, REF_ANNDATA_REGISTER, QRY_ANNDATA_REGISTER
 
 
 class AnnDataManager:
@@ -19,12 +19,6 @@ class AnnDataManager:
         self._registry = ANNDATA_REGISTER
         if adata_register is not None:
             self._registry.update(adata_register)
-    #     self._register_anndata()
-    #
-    # def _register_anndata(self, copy=False):
-    #     manager = self if copy is False else self.copy()
-    #     if self._registry['anchor_prob_key'] not in manager.adata.varm_keys():
-    #         manager.anchor_prob = None
 
     @property
     def latent(self):

@@ -2,11 +2,12 @@ import os
 
 import scanpy as sc
 import gdown
-
 from scarches.dataset.trvae.data_handling import remove_sparsity
 
 from polyphony.data import QryAnnDataManager, RefAnnDataManager
-from polyphony.utils.dir import DATA_DIR
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+DATA_DIR = os.path.join(ROOT_DIR, 'data')
 
 
 def load_pbmc(target_conditions=None, remove_cell_type=None, data_folder=DATA_DIR):
