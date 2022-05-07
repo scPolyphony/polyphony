@@ -2,7 +2,6 @@ import os
 
 import scanpy as sc
 import gdown
-
 from scarches.dataset.trvae.data_handling import remove_sparsity
 
 from polyphony.data import QryAnnDataManager, RefAnnDataManager

@@ -10,7 +10,6 @@ def rank_genes_groups(
     group_key='anchor_cluster',
     method='wilcoxon',
 ):
-    print("gene ranking starts.")
     cls_counts = adata.obs[group_key].value_counts()
     valid_cluster = cls_counts[cls_counts > 1].index.tolist()
     sc.tl.rank_genes_groups(adata, group_key, groups=valid_cluster, method=method, use_raw=False)
@@ -28,7 +27,6 @@ def rank_genes_groups(
                                                                 dtype=np.dtype("uint16"))
     adata.uns['rank_genes_groups']['_valid_cluster'] = np.array(valid_cluster,
                                                                 dtype=np.dtype("|O"))
-    print("gene ranking ends.")
 
 
 def get_differential_genes(

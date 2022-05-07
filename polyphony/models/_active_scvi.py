@@ -1,13 +1,13 @@
-from typing import Optional
+from typing import List, Optional, Literal
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 from scarches.models import SCVI
 from scvi.model._utils import _init_library_size
-from scvi._compat import Literal
 
-from polyphony.data import QryAnnDataManager
+from polyphony.anchor import Anchor
+from polyphony.data import RefAnnDataManager, QryAnnDataManager
 from polyphony.models import ActiveVAE
 
 UPDATE_KEY = '_scvi_cell_update'
@@ -95,21 +95,24 @@ class ActiveSCVI(SCVI):
 
     @staticmethod
     def setup_anchor_rep(
+        ref_dataset: RefAnnDataManager,
         query_dataset: QryAnnDataManager,
-        compression_terms,
-        lamb: Optional[int] = None
+        lamb: Optional[int] = None,
+        confirmed_anchors: List[Anchor] = None
     ):
         assign_mask = np.zeros(query_dataset.anchor_prob.shape)
-        for anchor in query_dataset.anchor['confirmed']:
-            cells = [info['cell_id'] for info in anchor['cells']]
-            cell_loc = query_dataset.adata.obs.index.get_indexer_for(cells)
-            assign_mask[cell_loc, anchor['anchor_ref_id']] = 1
+        if confirmed_anchors is not None:
+            for anchor in confirmed_anchors:
+                cells = [info['cell_id'] for info in anchor.cells]
+                cell_loc = query_dataset.adata.obs.index.get_indexer_for(cells)
+                assign_mask[cell_loc, anchor.reference_id] = 1
         anchor_mat = assign_mask * query_dataset.anchor_prob
         query_dataset.adata.obs[UPDATE_KEY] = anchor_mat.sum(axis=1) > 1e-3
         phi = pd.get_dummies(query_dataset.batch).to_numpy().T
         phi_moe = np.vstack((np.repeat(1, phi.shape[1]), phi))
         lamb = 1 if lamb is None else lamb
 
+        compression_terms = ref_dataset.adata.uns['_polyphony_params']['compression_terms']
         query_dataset.adata.obsm[REP_KEY] = symphony_correct(query_dataset.latent, anchor_mat.T,
                                                              compression_terms, phi_moe, lamb)
 

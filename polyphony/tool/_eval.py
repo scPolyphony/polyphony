@@ -3,8 +3,9 @@ from typing import List, Literal
 import numpy as np
 import pandas as pd
 from harmonypy import compute_lisi
+from sklearn.metrics import accuracy_score, f1_score
 
-from polyphony.data import AnnDataManager
+from polyphony.data import AnnDataManager, QryAnnDataManager, RefAnnDataManager
 
 agg_fn = {
     'median': np.median,
@@ -53,3 +54,17 @@ def f1_lisi(
                  (agg_fn['max'](clisi_dist) - agg_fn['min'](clisi_dist))
     f1_lisi_norm = 2 * (1 - clisi_norm) * ilisi_norm / (1 - clisi_norm + ilisi_norm)
     return f1_lisi_norm
+
+
+def evaluate(
+    ref_dataset: RefAnnDataManager,
+    qry_dataset: QryAnnDataManager
+):
+    performance = {
+        'ilisi': ilisi([ref_dataset, qry_dataset]),
+        'clisi': clisi([ref_dataset, qry_dataset]),
+        'f1_lisi': f1_lisi([ref_dataset, qry_dataset]),
+        'accuracy': accuracy_score(qry_dataset.cell_type, qry_dataset.pred),
+        'f1_score': f1_score(qry_dataset.cell_type, qry_dataset.pred, average='macro'),
+    }
+    qry_dataset.adata.uns['performance'] = performance

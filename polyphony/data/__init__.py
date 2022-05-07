@@ -1,6 +1,6 @@
-from polyphony.data._manager import AnnDataManager, QryAnnDataManager, RefAnnDataManager
-from polyphony.data.load_pancreas import load_pancreas
-from polyphony.data.load_pbmc import load_pbmc
+from ._manager import AnnDataManager, QryAnnDataManager, RefAnnDataManager
+from ._pancreas_example import load_pancreas
+from ._pbmc_example import load_pbmc
 
 __all__ = [
     'AnnDataManager',

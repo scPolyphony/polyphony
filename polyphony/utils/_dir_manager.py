@@ -8,6 +8,7 @@ import torch
 
 from polyphony.data import AnnDataManager
 from polyphony.models import ActiveSCVI
+from ._constant import DATA_DIR
 
 
 class DirManager:
@@ -26,9 +27,16 @@ class DirManager:
     """
     def __init__(
         self,
-        workspace_path
+        workspace_path=None,
+        instance_id=None
     ):
-        self._root = workspace_path
+        if workspace_path is None:
+            if instance_id is None:
+                raise ValueError("Params workspace_path and instance_id cannot both be None.")
+            else:
+                self._root = os.path.join(DATA_DIR, instance_id)
+        else:
+            self._root = workspace_path
         os.makedirs(self._root, exist_ok=True)
 
     @staticmethod
