@@ -43,7 +43,7 @@ class ModelManager:
         self.update_query_model(**kwargs)
         self.fit_classifier()
 
-    def fit_classifier(self, transform=False):
+    def fit_classifier(self, transform=True):
         self.classifier.fit(self.ref.latent, self.ref.cell_type)
         if transform:
             self.qry.pred = self.classifier.predict(self.qry.latent)
