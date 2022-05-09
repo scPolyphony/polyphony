@@ -13,6 +13,7 @@ class ModelResource(Resource):
         self.parser = reqparse.RequestParser()
         self.parser.add_argument('operation', location='json')
         self.pp: Polyphony = current_app.pp
+        self.args = current_app.args
 
     def put(self):
         args = self.parser.parse_args()
@@ -24,6 +25,9 @@ class ModelResource(Resource):
             self.pp.model_update_step()
             umap_transform(self.pp.ref, self.pp.qry)
             current_app.pp.recommend_anchors()
+
+            if self.args.save:
+                self.pp.save_snapshot()
 
             self.pp.ref.adata.write_zarr(os.path.join(zarr_folder, 'reference.zarr'))
             self.pp.qry.adata.write_zarr(os.path.join(zarr_folder, 'query.zarr'))

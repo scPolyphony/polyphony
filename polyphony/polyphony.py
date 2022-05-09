@@ -6,9 +6,10 @@ from sklearn.neighbors import KNeighborsClassifier
 from polyphony.anchor import Anchor, AnchorRecommender, AnchorSetManager, SymphonyAnchorRecommender
 from polyphony.data import RefAnnDataManager, QryAnnDataManager
 from polyphony.models import ModelManager
+from polyphony.utils._dir_manager import DirManagerMixin
 
 
-class Polyphony(ModelManager, AnchorSetManager):
+class Polyphony(ModelManager, AnchorSetManager, DirManagerMixin):
     def __init__(
         self,
         instance_id: str,

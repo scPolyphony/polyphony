@@ -1,6 +1,5 @@
 import os
 import warnings
-from typing import Optional
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
@@ -9,7 +8,6 @@ from polyphony import Polyphony
 from polyphony.data import load_pancreas, load_pbmc
 from polyphony.router.routes import add_routes
 from polyphony.tool._projection import umap_transform
-from polyphony.utils._dir_manager import DirManager
 from polyphony.utils._json_encoder import NpEncoder
 
 SERVER_STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
@@ -31,28 +29,37 @@ def create_app(args):
         return send_from_directory(SERVER_STATIC_DIR, filename=path, as_attachment=True)
 
     app.json_encoder = NpEncoder
+    app.args = args
     app.folders = create_project_folders(args.experiment, SERVER_STATIC_DIR)
 
-    ref_dataset, qry_dataset = load_datasets(args.problem, args.experiment, args.iter)
-    app.pp = Polyphony(args.experiment, ref_dataset, qry_dataset)
+    if args.iter is not None and args.load_exist:
+        pp = Polyphony.load_snapshot(args.experiment, args.iter)
+    else:
+        ref_dataset, qry_dataset = load_datasets(args.problem)
+        pp = Polyphony(args.experiment, ref_dataset, qry_dataset)
 
     if args.iter is None:
         # step-0: set up the anndata in scvi-tools
-        app.pp.setup_anndata()
+        pp.setup_anndata()
 
         # step-1: build the reference model and initialize the query model
-        app.pp.init_reference_step()
+        pp.init_reference_step()
 
         # step-2: calculate the 2-D UMAP projections according to the cells' latent representations
-        umap_transform(ref_dataset, qry_dataset)
+        umap_transform(pp.ref, pp.qry)
 
         # step-3: recommend anchor candidates
-        app.pp.recommend_anchors()
+        pp.recommend_anchors()
+
+        if args.save:
+            pp.save_snapshot()
 
     # save anndata in .zarr format
-    qry_dataset.anchor = None
-    ref_dataset.adata.write_zarr(os.path.join(app.folders['zarr'], 'reference.zarr'))
-    qry_dataset.adata.write_zarr(os.path.join(app.folders['zarr'], 'query.zarr'))
+    pp.qry.anchor = None
+    pp.ref.adata.write_zarr(os.path.join(app.folders['zarr'], 'reference.zarr'))
+    pp.qry.adata.write_zarr(os.path.join(app.folders['zarr'], 'query.zarr'))
+
+    app.pp = pp
 
     CORS(app, resources={r"/api/*": {"origins": "*"}, r"/files/*": {"origins": "*"}})
     add_routes(app)
@@ -60,20 +67,15 @@ def create_app(args):
     return app
 
 
-def load_datasets(problem_id: str, experiment: Optional[str] = None, iter: Optional[int] = None):
-    if iter is None:
-        if problem_id == 'pancreas':
-            ref_dataset, qry_dataset = load_pancreas()
-        elif problem_id == 'pbmc':
-            ref_dataset, qry_dataset = load_pbmc()
-        elif problem_id == 'pbmc_exp':
-            ref_dataset, qry_dataset = load_pbmc(remove_cell_type='Plasmacytoid dendritic cells')
-        else:
-            raise ValueError("Unknown problem.")
+def load_datasets(problem_id: str):
+    if problem_id == 'pancreas':
+        ref_dataset, qry_dataset = load_pancreas()
+    elif problem_id == 'pbmc':
+        ref_dataset, qry_dataset = load_pbmc()
+    elif problem_id == 'pbmc_exp':
+        ref_dataset, qry_dataset = load_pbmc(remove_cell_type='Plasmacytoid dendritic cells')
     else:
-        dir_manager = DirManager(instance_id=experiment)
-        ref_dataset = dir_manager.load_data(data_type='ref', model_iter=iter)
-        qry_dataset = dir_manager.load_data(data_type='qry', model_iter=iter)
+        raise ValueError("Unknown problem.")
     return ref_dataset, qry_dataset
 
 
