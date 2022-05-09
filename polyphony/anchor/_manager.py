@@ -18,6 +18,8 @@ class AnchorSetManager:
 
         self._anchor_recom = recommender_cls(self.ref, self.qry)
         self.anchors: List[Anchor] = []
+        if qry_dataset.anchor is not None:
+            self.anchors = [Anchor(**anchor) for anchor in qry_dataset.anchor]
 
     @property
     def confirmed_anchors(self):

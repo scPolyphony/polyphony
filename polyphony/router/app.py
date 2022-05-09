@@ -2,14 +2,17 @@ import os
 import warnings
 from typing import Optional
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 
 from polyphony import Polyphony
 from polyphony.data import load_pancreas, load_pbmc
 from polyphony.router.routes import add_routes
-from polyphony.router.utils import create_project_folders, NpEncoder, SERVER_STATIC_DIR
 from polyphony.tool._projection import umap_transform
+from polyphony.utils._dir_manager import DirManager
+from polyphony.utils._json_encoder import NpEncoder
+
+SERVER_STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
 
 
 def create_app(args):
@@ -23,10 +26,14 @@ def create_app(args):
         template_folder='../../apidocs'
     )
 
+    @app.route('/files/<path:path>')
+    def get_file(path):
+        return send_from_directory(SERVER_STATIC_DIR, filename=path, as_attachment=True)
+
     app.json_encoder = NpEncoder
     app.folders = create_project_folders(args.experiment, SERVER_STATIC_DIR)
 
-    ref_dataset, qry_dataset = load_datasets(args.problem, args.iter)
+    ref_dataset, qry_dataset = load_datasets(args.problem, args.experiment, args.iter)
     app.pp = Polyphony(args.experiment, ref_dataset, qry_dataset)
 
     if args.iter is None:
@@ -43,16 +50,17 @@ def create_app(args):
         app.pp.recommend_anchors()
 
     # save anndata in .zarr format
+    qry_dataset.anchor = None
     ref_dataset.adata.write_zarr(os.path.join(app.folders['zarr'], 'reference.zarr'))
     qry_dataset.adata.write_zarr(os.path.join(app.folders['zarr'], 'query.zarr'))
 
     CORS(app, resources={r"/api/*": {"origins": "*"}, r"/files/*": {"origins": "*"}})
-    add_routes(app, SERVER_STATIC_DIR)
+    add_routes(app)
 
     return app
 
 
-def load_datasets(problem_id: str, iter: Optional[int]):
+def load_datasets(problem_id: str, experiment: Optional[str] = None, iter: Optional[int] = None):
     if iter is None:
         if problem_id == 'pancreas':
             ref_dataset, qry_dataset = load_pancreas()
@@ -63,5 +71,17 @@ def load_datasets(problem_id: str, iter: Optional[int]):
         else:
             raise ValueError("Unknown problem.")
     else:
-        raise NotImplementedError
+        dir_manager = DirManager(instance_id=experiment)
+        ref_dataset = dir_manager.load_data(data_type='ref', model_iter=iter)
+        qry_dataset = dir_manager.load_data(data_type='qry', model_iter=iter)
     return ref_dataset, qry_dataset
+
+
+def create_project_folders(problem_id, root_dir=SERVER_STATIC_DIR, extensions=None):
+    extensions = ['zarr', 'json', 'csv'] if extensions is None else extensions
+    folders = {}
+    for ex in extensions:
+        fpath = os.path.join(root_dir, ex, problem_id)
+        folders[ex] = fpath
+        os.makedirs(fpath, exist_ok=True)
+    return folders

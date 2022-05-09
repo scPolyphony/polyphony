@@ -1,14 +1,17 @@
 import os
 import json
 from pathlib import Path
-from typing import Literal
+from typing import List, Literal
 
 import anndata
 import torch
+from anndata.compat import OverloadedDict
 
-from polyphony.data import AnnDataManager
+from polyphony.anchor import Anchor
+from polyphony.data import AnnDataManager, RefAnnDataManager, QryAnnDataManager
 from polyphony.models import ActiveSCVI
 from ._constant import DATA_DIR
+from ._json_encoder import NpEncoder
 
 
 class DirManager:
@@ -97,21 +100,22 @@ class DirManager:
 
     def save_data_uns(
         self,
-        uns: dict,
+        uns: OverloadedDict,
         data_type: Literal['ref', 'qry'],
         model_iter: int = 0
     ):
-        file_path = os.path.join(self._root, 'iter-%d' % model_iter, data_type + '_uns')
+        uns = {key: uns[key] for key in uns.keys()}
+        file_path = os.path.join(self._root, 'iter-%d' % model_iter, data_type + '_uns.json')
         DirManager._ensure_dir(file_path)
         with open(file_path, 'w') as f:
-            json.dump(uns, f)
+            json.dump(uns, f, cls=NpEncoder)
 
     def data_uns_exists(
         self,
         data_type: Literal['ref', 'qry'],
         model_iter: int = 0
     ):
-        file_path = os.path.join(self._root, 'iter-%d' % model_iter, data_type + '_uns')
+        file_path = os.path.join(self._root, 'iter-%d' % model_iter, data_type + '_uns.json')
         return os.path.exists(file_path)
 
     def load_data_uns(
@@ -119,7 +123,7 @@ class DirManager:
         data_type: Literal['ref', 'qry'],
         model_iter: int = 0
     ) -> dict:
-        file_path = os.path.join(self._root, 'iter-%d' % model_iter, data_type + '_uns')
+        file_path = os.path.join(self._root, 'iter-%d' % model_iter, data_type + '_uns.json')
         with open(file_path) as f:
             uns = json.load(f)
         return uns
@@ -137,11 +141,13 @@ class DirManager:
         self,
         data_manager: AnnDataManager,
         data_type: Literal['ref', 'qry'],
-        model_iter: int = 0
+        model_iter: int = 0,
+        anchors: List[Anchor] = None
     ):
+        if anchors is not None:
+            data_manager.anchor = [anchor.to_dict() for anchor in anchors]
         if data_manager.adata.uns is not None:
             self.save_data_uns(dict(data_manager.adata.uns), data_type, model_iter)
-            data_manager.adata.uns = None
         path = self.get_data_path(data_type, model_iter)
         DirManager._ensure_dir(path)
         data_manager.adata.write_h5ad(path)
@@ -158,9 +164,12 @@ class DirManager:
         self,
         data_type: Literal['ref', 'qry'],
         model_iter: int = 0
-    ) -> anndata.AnnData:
+    ) -> AnnDataManager:
         path = self.get_data_path(data_type, model_iter)
         adata = anndata.read_h5ad(path)
         if self.data_uns_exists(data_type, model_iter):
             adata.uns = self.load_data_uns(data_type, model_iter)
-        return adata
+        if data_type == 'ref':
+            return RefAnnDataManager(adata)
+        else:
+            return QryAnnDataManager(adata)

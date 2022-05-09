@@ -108,14 +108,14 @@ class QryAnnDataManager(AnnDataManager):
     def _register_anndata(self, copy=False):
         manager = self if copy is False else self.copy()
         manager.adata.obs[self._registry['source_key']] = 'query'
-        if self._registry['label_key'] not in manager.adata.var_keys():
+        if self._registry['label_key'] not in manager.adata.obs.columns:
             manager.label = pd.Series(dtype='object')
             manager.label = 'none'
-        if self._registry['pred_key'] not in manager.adata.var_keys():
+        if self._registry['pred_key'] not in manager.adata.obs.columns:
             manager.pred = pd.Series(dtype='object')
-        if self._registry['pred_prob_key'] not in manager.adata.var_keys():
+        if self._registry['pred_prob_key'] not in manager.adata.obs.columns:
             manager.pred_prob = None
-        if self._registry['anchor_detail_key'] not in manager.adata.uns_keys():
+        if self._registry['anchor_detail_key'] not in manager.adata.uns.keys():
             manager.anchor = None
 
     @property
