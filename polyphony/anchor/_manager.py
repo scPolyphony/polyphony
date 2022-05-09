@@ -18,11 +18,19 @@ class AnchorSetManager:
 
         self._anchor_recom = recommender_cls(self.ref, self.qry)
         self.anchors: List[Anchor] = []
+        if qry_dataset.anchor is not None:
+            self.anchors = [Anchor(**anchor) for anchor in qry_dataset.anchor]
+
+    @property
+    def confirmed_anchors(self):
+        return [anchor for anchor in self.anchors if anchor.confirmed]
 
     def _validate_anchor(self, anchor: Union[Anchor, list]):
         pass
 
     def recommend_anchors(self, *args, **kwargs):
+        self.anchors = [anchor for anchor in self.anchors
+                        if anchor.confirmed or anchor.create_by == 'user']
         self.anchors += self._anchor_recom.recommend_anchors(*args, **kwargs)
 
     def join_anchor(self, anchor: Union[Anchor, list]):

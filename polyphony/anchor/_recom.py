@@ -31,6 +31,8 @@ class AnchorRecommender(ABC):
         self._clustering_method = clustering_method
         self._anchor_num = 0
         self._param = {}
+        if '_polyphony_params' in self.ref.adata.uns:
+            self._param = self.ref.adata.uns['_polyphony_params']
 
     @abstractmethod
     def _calc_anchor_assign_prob(self, query_cell_loc=None, *args, **kwargs):
@@ -168,12 +170,12 @@ class SymphonyAnchorRecommender(AnchorRecommender):
             )
 
         q_latent = self.qry.latent.T
+        center = np.array(self._param['reference_cluster_centers'])
+        sigma = np.array(self._param['sigma'])[:, None]
+
         normed_q_latent = q_latent / np.linalg.norm(q_latent, ord=2, axis=0)
-        normed_center = self._param['reference_cluster_centers'] / \
-                        np.linalg.norm(self._param['reference_cluster_centers'], ord=2, axis=0)
+        normed_center = center / np.linalg.norm(center, ord=2, axis=0)
         dist_mat = 2 * (1 - np.dot(normed_center.T, normed_q_latent))
-        R = -dist_mat
-        R = R / self._param['sigma'][:, None]
-        R = np.exp(R)
+        R = np.exp(-dist_mat / sigma)
         R = R / np.sum(R, axis=0)
         self.qry.anchor_prob = R.T
