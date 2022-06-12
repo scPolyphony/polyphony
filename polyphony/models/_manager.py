@@ -7,6 +7,14 @@ from polyphony.models import ActiveSCVI
 
 
 class ModelManager:
+    """Manager model operations.
+
+    Args:
+        instance_id: str, a unique value to identify the experiment
+        ref_dataset: RefAnnDataManager, an object containing the reference dataset with annotations
+        qry_dataset: QryAnnDataManager, an object containing the query dataset with annotations
+        classifier_cls: Type[Object], the class name of the classifier
+    """
     def __init__(
         self,
         instance_id: str,
@@ -56,7 +64,7 @@ class ModelManager:
             use_layer_norm="both",
             use_batch_norm="none",
         )
-        self.ref_model.train(max_epochs=600, **train_kwargs)
+        self.ref_model.train(max_epochs=10, **train_kwargs)
         if transform:
             self.ref.latent = self.ref_model.get_latent_representation()
 

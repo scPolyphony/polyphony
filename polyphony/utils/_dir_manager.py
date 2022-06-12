@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Literal
 
 import anndata
+import numpy as np
 
 from polyphony.anchor import Anchor
 from polyphony.data import AnnDataManager, RefAnnDataManager, QryAnnDataManager
@@ -120,6 +121,13 @@ class DirManagerMixin:
                                  data_type + '_uns.json')
         with open(file_path) as f:
             uns = json.load(f)
+        
+        # TODO: change the types to zarr.js' supporting ones
+        if data_type == 'ref' and 'rank_genes_groups' in uns.keys():
+            uns['rank_genes_groups']['_names_indices'] = np.array(
+                uns['rank_genes_groups']['_names_indices'], dtype=np.dtype("uint16"))
+            uns['rank_genes_groups']['_valid_cluster'] = np.array(
+                uns['rank_genes_groups']['_valid_cluster'], dtype=np.dtype("|O"))
         return uns
 
     @classmethod

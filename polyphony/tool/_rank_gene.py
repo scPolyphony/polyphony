@@ -33,7 +33,7 @@ def get_differential_genes(
     adata: AnnData,
     cluster_idx: str,
     topk: int = 100,
-    return_type: Union[Literal['dict', 'matrix']] = 'dict'
+    return_type: Union[Literal['dict'], Literal['matrix']] = 'dict'
 ):
     valid_cluster = adata.uns['rank_genes_groups']['_valid_cluster'].tolist()
     if cluster_idx not in valid_cluster:
@@ -53,7 +53,7 @@ def get_differential_genes_by_cell_ids(
     cell_ids: List[str],
     method='wilcoxon',
     topk: int = 100,
-    return_type: Union[Literal['dict', 'matrix']] = 'dict'
+    return_type: Union[Literal['dict'], Literal['matrix']] = 'dict'
 ):
     adata = adata.copy()
     adata.obs['cls'] = 'default'

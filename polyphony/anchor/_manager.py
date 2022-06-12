@@ -7,6 +7,13 @@ from polyphony.tool import rank_gene as rg
 
 
 class AnchorSetManager:
+    """Manager anchor operations.
+
+    Args:
+        ref_dataset: RefAnnDataManager, an object containing the reference dataset with annotations
+        qry_dataset: QryAnnDataManager, an object containing the query dataset with annotations
+        recommender_cls: Type[AnchorRecommender], the class name of the anchor recommender
+    """
     def __init__(
         self,
         ref_dataset: RefAnnDataManager,
@@ -61,15 +68,17 @@ class AnchorSetManager:
         self.anchors.append(anchor)
 
     def delete_anchor(self, anchor_id: str):
-        pos = find_anchor_by_id(self.qry.anchor, anchor_id)
+        pos = find_anchor_by_id(self.anchors, anchor_id)
         pos >= 0 and self.anchors.pop(pos)
 
     def confirm_anchor(self, anchor_id: str):
-        pos = find_anchor_by_id(self.qry.anchor, anchor_id)
+        pos = find_anchor_by_id(self.anchors, anchor_id)
         if pos >= 0:
             self.anchors[pos].confirm()
-            query_cell_ids = [cell['cell_id'] for cell in self.anchors[pos].cells]
-            self.qry.label.loc[query_cell_ids] = self.qry.pred.loc[query_cell_ids]
+            # TODO: update the labels of the confirmed cells
+            # query_cell_ids = [cell['cell_id'] for cell in self.anchors[pos].cells]
+            # self.qry.label.cat.add_categories(self.qry.pred.cat.categories, inplace=True)
+            # self.qry.label.loc[query_cell_ids] = self.qry.pred.loc[query_cell_ids]
 
 
 def find_anchor_by_id(anchors: List[Anchor], anchor_id: str):
