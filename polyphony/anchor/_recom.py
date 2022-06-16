@@ -19,7 +19,7 @@ class AnchorRecommender(ABC):
         query_dataset: QryAnnDataManager,
         min_count: Optional[int] = 100,
         min_conf: Optional[float] = 0.5,
-        clustering_method: Optional[str] = 'leiden',
+        query_cluster_resolution: Optional[float] = 1,
     ):
         self.qry = query_dataset
         self.ref = ref_dataset
@@ -27,8 +27,8 @@ class AnchorRecommender(ABC):
         self._anchor_ref_build_flag = False
         self._min_count = min_count
         self._min_conf = min_conf
+        self._query_cluster_resolution = query_cluster_resolution
 
-        self._clustering_method = clustering_method
         self._anchor_num = 0
         self._param = {}
         if '_polyphony_params' in self.ref.adata.uns:
@@ -56,28 +56,24 @@ class AnchorRecommender(ABC):
         # map query cells to reference clusters
         self._calc_anchor_assign_prob(*args, **kwargs)
         self._build_anchor_reference()
+        sc.pp.neighbors(self.qry.adata, use_rep='latent')
         return self.create_anchors()
 
     def create_anchors(self) -> List[Anchor]:
         assign_conf = pd.DataFrame(self.qry.anchor_prob, index=self.qry.adata.obs.index)
-        anchors = []
 
         unlabelled = self.qry.adata[self.qry.label == 'none']
         _index = unlabelled.obs.index
         self.qry.anchor_assign = 'none'
 
         if len(_index) > 0:
-            if self._clustering_method == 'leiden':
-                sc.pp.neighbors(unlabelled, use_rep='latent')
-                sc.tl.leiden(unlabelled)
-                self.qry.anchor_assign.loc[_index] = unlabelled.obs['leiden']
-            else:
-                self.qry.anchor_assign.loc[_index] = assign_conf.loc[_index].argmax(axis=1)
-
+            sc.tl.leiden(unlabelled, resolution=self._query_cluster_resolution)
+            self.qry.anchor_assign.loc[_index] = unlabelled.obs['leiden']
         self.qry.anchor_assign = self.qry.anchor_assign.astype('str')
 
-        local_id_ref = {}
+        rg.rank_genes_groups(self.qry.adata)
 
+        anchors = []
         for anchor_idx in self.qry.anchor_assign.unique():
             if anchor_idx == 'none':
                 continue
@@ -88,7 +84,6 @@ class AnchorRecommender(ABC):
 
             # filter the confident assignment
             valid_cell_index = anchor_conf[anchor_conf > self._min_conf].index
-
             if len(valid_cell_index) < self._min_count:
                 continue
 
@@ -96,18 +91,10 @@ class AnchorRecommender(ABC):
                 id="anchor-{}".format(self._anchor_num),
                 reference_id=reference_id,
                 cells=[{'cell_id': c, 'dist': 1} for c in valid_cell_index],
-                confirmed=False,
-                create_by='model'
+                rank_genes_groups=rg.get_diff_genes(self.qry.adata, anchor_idx)
             ))
-            local_id_ref[anchors[-1].id] = anchor_idx
 
         anchors = self.update_anchors(anchors)
-
-        rg.rank_genes_groups(self.qry.adata)
-        for anchor in anchors:
-            top_genes = rg.get_differential_genes(self.qry.adata, local_id_ref[anchor.id],
-                                                  return_type='matrix')
-            anchor.rank_genes_groups = top_genes
 
         return anchors
 

@@ -19,11 +19,14 @@ class AnchorSetManager:
         ref_dataset: RefAnnDataManager,
         qry_dataset: QryAnnDataManager,
         recommender_cls: Type[AnchorRecommender] = SymphonyAnchorRecommender,
+        recommender_params: dict = None,
     ):
         self.ref = ref_dataset
         self.qry = qry_dataset
 
-        self._anchor_recom = recommender_cls(self.ref, self.qry)
+        if recommender_params is None:
+            recommender_params = {}
+        self._anchor_recom = recommender_cls(self.ref, self.qry, **recommender_params)
         self.anchors: List[Anchor] = []
         if qry_dataset.anchor is not None:
             self.anchors = [Anchor(**anchor) for anchor in qry_dataset.anchor]
@@ -53,7 +56,7 @@ class AnchorSetManager:
         if pos >= 0:
             anchor.reference_id = self.anchors[pos].reference_id
             anchor = self._anchor_recom.update_anchors([anchor])[0]
-            anchor.rank_genes_groups = rg.get_differential_genes_by_cell_ids(
+            anchor.rank_genes_groups = rg.get_diff_genes_by_cell_ids(
                 self.qry.adata, [c['cell_id'] for c in anchor.cells])
             self.anchors[pos] = anchor
 
@@ -61,7 +64,7 @@ class AnchorSetManager:
         if isinstance(anchor, dict):
             anchor = Anchor(**anchor)
         anchor = self._anchor_recom.update_anchors([anchor])[0]
-        anchor.rank_genes_groups = rg.get_differential_genes_by_cell_ids(
+        anchor.rank_genes_groups = rg.get_diff_genes_by_cell_ids(
             self.qry.adata, [c['cell_id'] for c in anchor.cells])
         anchor.confirmed = False
         anchor.create_by = 'user'
@@ -76,9 +79,9 @@ class AnchorSetManager:
         if pos >= 0:
             self.anchors[pos].confirm()
             # TODO: update the labels of the confirmed cells
-            # query_cell_ids = [cell['cell_id'] for cell in self.anchors[pos].cells]
-            # self.qry.label.cat.add_categories(self.qry.pred.cat.categories, inplace=True)
-            # self.qry.label.loc[query_cell_ids] = self.qry.pred.loc[query_cell_ids]
+            query_cell_ids = [cell['cell_id'] for cell in self.anchors[pos].cells]
+            self.qry.label = self.qry.label.astype(str)
+            self.qry.label.loc[query_cell_ids] = self.qry.pred.loc[query_cell_ids]
 
 
 def find_anchor_by_id(anchors: List[Anchor], anchor_id: str):
