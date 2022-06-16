@@ -27,8 +27,7 @@ class ModelManager:
         self.qry = qry_dataset
 
         self.ref_model = None
-        self.qry_model = None
-        self.update_qry_models = []
+        self.qry_models = []
         self.classifier = classifier_cls()
         self.model_iter = 0
 
@@ -54,7 +53,7 @@ class ModelManager:
             self.qry.pred = self.classifier.predict(self.qry.latent)
             self.qry.pred_prob = self.classifier.predict_proba(self.qry.latent)
 
-    def fit_reference_model(self, transform=True, **train_kwargs):
+    def fit_reference_model(self, transform=True, max_epochs=400, **train_kwargs):
         # TODO: move the training parameters to a public function
         self.ref_model = ActiveSCVI(
             self.ref.adata,
@@ -64,28 +63,28 @@ class ModelManager:
             use_layer_norm="both",
             use_batch_norm="none",
         )
-        self.ref_model.train(max_epochs=10, **train_kwargs)
+        self.ref_model.train(max_epochs=max_epochs, **train_kwargs)
         if transform:
             self.ref.latent = self.ref_model.get_latent_representation()
 
-    def fit_query_model(self, transform=True, **train_kwargs):
-        self.qry_model = ActiveSCVI.load_query_data(
+    def fit_query_model(self, transform=True, max_epochs=10, **train_kwargs):
+        self.qry_models.append(ActiveSCVI.load_query_data(
             self.qry.adata,
             self.ref_model,
             freeze_dropout=True,
-        )
-        self.qry_model.train(max_epochs=10, **train_kwargs)
+        ))
+        self.qry_models[0].train(max_epochs=max_epochs, **train_kwargs)
         if transform:
-            self.qry.latent = self.qry_model.get_latent_representation()
+            self.qry.latent = self.qry_models[0].get_latent_representation()
 
     def update_query_model(self, transform=True, max_epochs=100, batch_size=256, **train_kwargs):
         self.model_iter += 1
-        self.update_qry_models.append(copy.deepcopy(self.qry_model))
-        self.update_qry_models[-1].train(
+        self.qry_models.append(copy.deepcopy(self.qry_models[-1]))
+        self.qry_models[-1].train(
             max_epochs=max_epochs,
             early_stopping=True,
             batch_size=batch_size,
             **train_kwargs
         )
         if transform:
-            self.qry.latent = self.update_qry_models[-1].get_latent_representation()
+            self.qry.latent = self.qry_models[-1].get_latent_representation()
