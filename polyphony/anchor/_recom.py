@@ -17,9 +17,8 @@ class AnchorRecommender(ABC):
         self,
         ref_dataset: RefAnnDataManager,
         query_dataset: QryAnnDataManager,
-        min_count: Optional[int] = 100,
+        min_count: Optional[int] = 50,
         min_conf: Optional[float] = 0.5,
-        query_cluster_resolution: Optional[float] = 1,
     ):
         self.qry = query_dataset
         self.ref = ref_dataset
@@ -27,7 +26,6 @@ class AnchorRecommender(ABC):
         self._anchor_ref_build_flag = False
         self._min_count = min_count
         self._min_conf = min_conf
-        self._query_cluster_resolution = query_cluster_resolution
 
         self._anchor_num = 0
         self._param = {}
@@ -35,7 +33,7 @@ class AnchorRecommender(ABC):
             self._param = self.ref.adata.uns['_polyphony_params']
 
     @abstractmethod
-    def _calc_anchor_assign_prob(self, query_cell_loc=None, *args, **kwargs):
+    def _calc_anchor_assign_prob(self, *args, **kwargs):
         pass
 
     def _build_anchor_reference(self):
@@ -60,27 +58,27 @@ class AnchorRecommender(ABC):
         return self.create_anchors()
 
     def create_anchors(self) -> List[Anchor]:
-        assign_conf = pd.DataFrame(self.qry.anchor_prob, index=self.qry.adata.obs.index)
+        conf = pd.DataFrame(self.qry.anchor_prob, index=self.qry.adata.obs.index)
 
-        unlabelled = self.qry.adata[self.qry.label == 'none']
+        unlabelled = self.qry.adata[self.qry.label == 'none'].copy()
         _index = unlabelled.obs.index
         self.qry.anchor_assign = 'none'
 
         if len(_index) > 0:
-            sc.tl.leiden(unlabelled, resolution=self._query_cluster_resolution)
+            sc.tl.leiden(unlabelled)
             self.qry.anchor_assign.loc[_index] = unlabelled.obs['leiden']
         self.qry.anchor_assign = self.qry.anchor_assign.astype('str')
 
-        rg.rank_genes_groups(self.qry.adata)
+        # rg.rank_genes_groups(self.qry.adata)
 
         anchors = []
-        for anchor_idx in self.qry.anchor_assign.unique():
-            if anchor_idx == 'none':
-                continue
+        candidate_aid = [aid for aid in self.qry.anchor_assign.unique() if aid != 'none']
+
+        for anchor_idx in candidate_aid:
             self._anchor_num += 1
             cell_index = self.qry.adata.obs[self.qry.anchor_assign == anchor_idx].index
-            reference_id = assign_conf.columns[assign_conf.loc[cell_index].sum(axis=0).argmax()]
-            anchor_conf = assign_conf.loc[cell_index, reference_id]
+            reference_id = conf.columns[conf.loc[cell_index].sum(axis=0).argmax()]
+            anchor_conf = conf.loc[cell_index, reference_id]
 
             # filter the confident assignment
             valid_cell_index = anchor_conf[anchor_conf > self._min_conf].index
@@ -91,7 +89,7 @@ class AnchorRecommender(ABC):
                 id="anchor-{}".format(self._anchor_num),
                 reference_id=reference_id,
                 cells=[{'cell_id': c, 'dist': 1} for c in valid_cell_index],
-                rank_genes_groups=rg.get_diff_genes(self.qry.adata, anchor_idx)
+                # rank_genes_groups=rg.get_diff_genes(self.qry.adata, anchor_idx)
             ))
 
         anchors = self.update_anchors(anchors)
@@ -137,14 +135,15 @@ class SymphonyAnchorRecommender(AnchorRecommender):
             sigma=np.repeat(sigma, n_cluster),
         )
 
-    def _calc_anchor_assign_prob(self, **kwargs):
+    def _calc_anchor_assign_prob(self, verbose=False):
         if 'reference_cluster_centers' not in self._param.keys():
             hm = run_harmony(
                 self.ref.latent,
                 self.ref.adata.obs,
                 self.ref.batch_key,
                 nclust=self._param['n_cluster'],
-                sigma=self._param['sigma']
+                sigma=self._param['sigma'],
+                verbose=verbose
             )
             self._param['reference_cluster_centers'] = hm.Y
             self.ref.anchor_prob = hm.R.T

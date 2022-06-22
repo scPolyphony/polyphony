@@ -38,10 +38,8 @@ class AnchorSetManager:
     def _validate_anchor(self, anchor: Union[Anchor, list]):
         pass
 
-    def recommend_anchors(self, *args, **kwargs):
-        self.anchors = [anchor for anchor in self.anchors
-                        if anchor.confirmed or anchor.create_by == 'user']
-        self.anchors += self._anchor_recom.recommend_anchors(*args, **kwargs)
+    def recommend_anchors(self, **kwargs):
+        self.anchors = self._anchor_recom.recommend_anchors(**kwargs)
 
     def join_anchor(self, anchor: Union[Anchor, list]):
         if isinstance(anchor, Anchor):
@@ -78,7 +76,6 @@ class AnchorSetManager:
         pos = find_anchor_by_id(self.anchors, anchor_id)
         if pos >= 0:
             self.anchors[pos].confirm()
-            # TODO: update the labels of the confirmed cells
             query_cell_ids = [cell['cell_id'] for cell in self.anchors[pos].cells]
             self.qry.label = self.qry.label.astype(str)
             self.qry.label.loc[query_cell_ids] = self.qry.pred.loc[query_cell_ids]
