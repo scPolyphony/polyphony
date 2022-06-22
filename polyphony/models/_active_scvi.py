@@ -96,28 +96,30 @@ class ActiveSCVI(SCVI):
     @staticmethod
     def setup_anchor_rep(
         ref_dataset: RefAnnDataManager,
-        query_dataset: QryAnnDataManager,
-        lamb: Optional[int] = None,
+        qry_dataset: QryAnnDataManager,
         confirmed_anchors: List[Anchor] = None
     ):
-        assign_mask = np.zeros(query_dataset.anchor_prob.shape)
-        if confirmed_anchors is not None:
-            for anchor in confirmed_anchors:
-                cells = [info['cell_id'] for info in anchor.cells]
-                cell_loc = query_dataset.adata.obs.index.get_indexer_for(cells)
-                assign_mask[cell_loc, anchor.reference_id] = 1
-        anchor_mat = assign_mask * query_dataset.anchor_prob
-        query_dataset.adata.obs[UPDATE_KEY] = anchor_mat.sum(axis=1) > 1e-3
-        phi = pd.get_dummies(query_dataset.batch).to_numpy().T
+        if confirmed_anchors is None:
+            return
+        assign_mask = np.zeros(qry_dataset.anchor_prob.shape)
+        cell_locs = []
+        for anchor in confirmed_anchors:
+            cells = [info['cell_id'] for info in anchor.cells]
+            cell_loc = qry_dataset.adata.obs.index.get_indexer_for(cells)
+            cell_locs += cell_loc.tolist()
+            assign_mask[cell_loc, anchor.reference_id] = 1
+            qry_dataset.adata.obs[UPDATE_KEY].loc[cells] = True
+        anchor_mat = assign_mask * qry_dataset.anchor_prob
+        phi = pd.get_dummies(qry_dataset.batch).to_numpy().T
         phi_moe = np.vstack((np.repeat(1, phi.shape[1]), phi))
-        lamb = 1 if lamb is None else lamb
 
         compression_terms = ref_dataset.adata.uns['_polyphony_params']['compression_terms']
-        query_dataset.adata.obsm[REP_KEY] = symphony_correct(query_dataset.latent, anchor_mat.T,
-                                                             compression_terms, phi_moe, lamb)
+        corr = symphony_correct(qry_dataset.latent, anchor_mat.T, compression_terms, phi_moe)
+        qry_dataset.adata.obsm[REP_KEY][cell_locs] = corr[cell_locs]
 
 
-def symphony_correct(latent, R, compression_terms, phi_moe, lamb):
+def symphony_correct(latent, R, compression_terms, phi_moe):
+    lamb = 1
     N = compression_terms['N']
     C = compression_terms['C']
     updated_latent = latent.copy()

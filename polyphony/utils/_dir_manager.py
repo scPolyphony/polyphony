@@ -185,8 +185,7 @@ class DirManagerMixin:
 
     def save_snapshot(self):
         self.save_model(self.ref_model, 'ref')
-        for i, model in enumerate(self.qry_models):
-            self.save_model(model, 'qry', i)
+        self.save_model(self.qry_model, 'qry', self.model_iter)
 
         self.save_data(self.ref, 'ref', self.model_iter)
         self.save_data(self.qry, 'qry', self.model_iter)
@@ -202,6 +201,5 @@ class DirManagerMixin:
         qry = cls.load_data(instance_id, 'qry', model_iter)
         manager = cls(instance_id, ref, qry, **kwargs)
         manager.ref_model = cls.load_model(instance_id, ref.adata, 'ref')
-        manager.qry_models = [cls.load_model(instance_id, qry.adata, 'qry', i)
-                              for i in range(model_iter+1)]
+        manager.qry_model = cls.load_model(instance_id, qry.adata, 'qry', model_iter)
         return manager
