@@ -34,6 +34,6 @@ class ActiveVAE(VAE):
         kl_local = old_loss_record.kl_local
         kl_global = old_loss_record.kl_global
 
-        loss += anchor_loss
+        loss += anchor_loss / 2
 
         return LossRecorder(loss, reconst_loss, kl_local, kl_global, anchor_loss=anchor_loss)

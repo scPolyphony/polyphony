@@ -29,11 +29,11 @@ def rank_genes_groups(
                                                                 dtype=np.dtype("|O"))
 
 
-def get_differential_genes(
+def get_diff_genes(
     adata: AnnData,
     cluster_idx: str,
     topk: int = 100,
-    return_type: Union[Literal['dict', 'matrix']] = 'dict'
+    return_type: Union[Literal['dict'], Literal['matrix']] = 'matrix'
 ):
     valid_cluster = adata.uns['rank_genes_groups']['_valid_cluster'].tolist()
     if cluster_idx not in valid_cluster:
@@ -48,15 +48,15 @@ def get_differential_genes(
             return dict(name_indice=names, score=scores)
 
 
-def get_differential_genes_by_cell_ids(
+def get_diff_genes_by_cell_ids(
     adata: AnnData,
     cell_ids: List[str],
     method='wilcoxon',
     topk: int = 100,
-    return_type: Union[Literal['dict', 'matrix']] = 'dict'
+    return_type: Union[Literal['dict'], Literal['matrix']] = 'matrix'
 ):
     adata = adata.copy()
     adata.obs['cls'] = 'default'
     adata.obs['cls'].loc[cell_ids] = 'selected'
     rank_genes_groups(adata, group_key='cls', method=method)
-    return get_differential_genes(adata, 'selected', topk, return_type)
+    return get_diff_genes(adata, 'selected', topk, return_type)

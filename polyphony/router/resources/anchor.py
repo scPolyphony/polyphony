@@ -9,17 +9,26 @@ class AnchorResource(Resource):
     def __init__(self):
         self.parser = reqparse.RequestParser()
         self.parser.add_argument('anchor', type=dict, location='json')
-        self.parser.add_argument('id', location='json')
+        self.parser.add_argument('anchor_id', location='json')
         self.parser.add_argument('operation', location='json')
         self.pp: Polyphony = current_app.pp
 
     def get(self):
-        return [anchor.to_dict() for anchor in self.pp.anchors]
+        anchors = {"unjustified": [], "confirmed": [], "user_selection": []}
+        for anchor in self.pp.anchors:
+            if anchor.confirmed:
+                anchors["confirmed"].append(anchor.to_dict())
+            elif anchor.create_by == "model":
+                anchors["unjustified"].append(anchor.to_dict())
+            else:
+                anchors["user_selection"].append(anchor.to_dict())
+        return anchors
 
     def put(self):
         args = self.parser.parse_args()
+        print(args)
         anchor = args.get('anchor', None)
-        anchor_id = args.get('id', None)
+        anchor_id = args.get('anchor_id', None)
         operation = args.get('operation', None)  # be either 'add', 'refine', and 'confirm'
         if operation == 'add':
             self.pp.register_anchor(anchor)

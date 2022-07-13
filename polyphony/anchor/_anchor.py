@@ -4,13 +4,25 @@ import numpy as np
 
 
 class Anchor:
+    """An Anchor container.
+
+    Args:
+        id: str, a unique string to identify the anchor
+        reference_id: int, the identifier of the corresponding reference cluster
+        confirmed: bool, whether this anchor has been confirmed
+        create_by: union['model', 'user'], the creator of the anchor, either the model or the user
+        dist_median: float, the median distance to the reference cluster center
+        rank_genes_groups: dict, a dictionary describing the ranking of genes in distinguish the
+            anchor cells from the rest of cells in the query dataset
+        cells: list, cells within the anchor
+    """
     def __init__(
         self,
         id: str,
         reference_id: Optional[int] = None,
         confirmed: Optional[bool] = False,
         create_by: Optional[Literal['model', 'user']] = 'model',
-        dist_median: Optional[int] = None,
+        dist_median: Optional[float] = None,
         rank_genes_groups: Optional[dict] = None,
 
         cells: Optional[List[dict]] = None,
@@ -28,8 +40,8 @@ class Anchor:
             self._update_anchor_dist_median()
 
     def confirm(self):
-        if self.confirmed is False:
-            raise ValueError("anchor-{} has been confirmed".format(self.id))
+        if self.confirmed is True:
+            raise ValueError("{} has been confirmed".format(self.id))
         self.confirmed = True
 
     def _update_anchor_dist_median(self):

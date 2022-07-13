@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Literal
 
 import anndata
+import numpy as np
 
 from polyphony.anchor import Anchor
 from polyphony.data import AnnDataManager, RefAnnDataManager, QryAnnDataManager
@@ -120,6 +121,13 @@ class DirManagerMixin:
                                  data_type + '_uns.json')
         with open(file_path) as f:
             uns = json.load(f)
+
+        # TODO: change the types to zarr.js' supporting ones
+        if data_type == 'ref' and 'rank_genes_groups' in uns.keys():
+            uns['rank_genes_groups']['_names_indices'] = np.array(
+                uns['rank_genes_groups']['_names_indices'], dtype=np.dtype("uint16"))
+            uns['rank_genes_groups']['_valid_cluster'] = np.array(
+                uns['rank_genes_groups']['_valid_cluster'], dtype=np.dtype("|O"))
         return uns
 
     @classmethod
@@ -143,8 +151,8 @@ class DirManagerMixin:
     ):
         if anchors is not None:
             data_manager.anchor = [anchor.to_dict() for anchor in anchors]
-        if data_manager.adata.uns is not None:
-            self.save_data_uns(dict(data_manager.adata.uns), data_type, model_iter)
+        # if data_manager.adata.uns is not None:
+        #     self.save_data_uns(dict(data_manager.adata.uns), data_type, model_iter)
         path = DirManagerMixin.get_data_path(self.instance_id, data_type, model_iter)
         DirManagerMixin._ensure_dir(path)
         data_manager.adata.write_h5ad(path)
@@ -168,8 +176,8 @@ class DirManagerMixin:
     ) -> AnnDataManager:
         path = cls.get_data_path(instance_id, data_type, model_iter)
         adata = anndata.read_h5ad(path)
-        if cls.data_uns_exists(instance_id, data_type, model_iter):
-            adata.uns = cls.load_data_uns(instance_id, data_type, model_iter)
+        # if cls.data_uns_exists(instance_id, data_type, model_iter):
+        #     adata.uns = cls.load_data_uns(instance_id, data_type, model_iter)
         if data_type == 'ref':
             return RefAnnDataManager(adata)
         else:
@@ -177,9 +185,7 @@ class DirManagerMixin:
 
     def save_snapshot(self):
         self.save_model(self.ref_model, 'ref')
-        self.save_model(self.qry_model, 'qry')
-        if len(self.update_qry_models) > 0:
-            self.save_model(self.update_qry_models[-1], 'qry', self.model_iter)
+        self.save_model(self.qry_model, 'qry', self.model_iter)
 
         self.save_data(self.ref, 'ref', self.model_iter)
         self.save_data(self.qry, 'qry', self.model_iter)
@@ -188,12 +194,12 @@ class DirManagerMixin:
     def load_snapshot(
         cls,
         instance_id: str,
-        model_iter: int = 0
+        model_iter: int = 0,
+        **kwargs,
     ):
         ref = cls.load_data(instance_id, 'ref', model_iter)
         qry = cls.load_data(instance_id, 'qry', model_iter)
-        manager = cls(instance_id, ref, qry)
+        manager = cls(instance_id, ref, qry, **kwargs)
         manager.ref_model = cls.load_model(instance_id, ref.adata, 'ref')
-        manager.qry_model = cls.load_model(instance_id, qry.adata, 'qry')
-        manager.update_qry_models = [cls.load_model(instance_id, qry.adata, 'qry', model_iter)]
+        manager.qry_model = cls.load_model(instance_id, qry.adata, 'qry', model_iter)
         return manager
