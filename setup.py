@@ -13,13 +13,18 @@ with open('HISTORY.rst') as history_file:
 install_requires = [
     'pandas>=1.3.0',
     'scikit-learn>=1.0.2',
-    'scanpy>=1.8.2',
+    'scanpy==1.8.2',
     'scipy>=1.7.3',
     'scvi-tools==0.14.6',
-    'scarches>=0.4.0',
+    'scarches==0.4.0',
     'tensorflow>=2.0',
     'umap-learn<=0.5.2',
     'harmonypy==0.0.5',
+    'anndata==0.7.8',
+    'matplotlib==3.5.1',
+    'pytorch-lightning==1.3.8',
+    'torch==1.10.2',
+    'torchmetrics==0.7.2',
 
     # Flask
     'flask>=1.1.0',
