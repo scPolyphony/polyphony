@@ -69,7 +69,7 @@ class AnchorRecommender(ABC):
             self.qry.anchor_assign.loc[_index] = unlabelled.obs['leiden']
         self.qry.anchor_assign = self.qry.anchor_assign.astype('str')
 
-        # rg.rank_genes_groups(self.qry.adata)
+        rg.rank_genes_groups(self.qry.adata)
 
         anchors = []
         candidate_aid = [aid for aid in self.qry.anchor_assign.unique() if aid != 'none']
@@ -89,7 +89,7 @@ class AnchorRecommender(ABC):
                 id="anchor-{}".format(self._anchor_num),
                 reference_id=reference_id,
                 cells=[{'cell_id': c, 'dist': 1} for c in valid_cell_index],
-                # rank_genes_groups=rg.get_diff_genes(self.qry.adata, anchor_idx)
+                rank_genes_groups=rg.get_diff_genes(self.qry.adata, anchor_idx)
             ))
 
         anchors = self.update_anchors(anchors)
